@@ -1,0 +1,16 @@
+# Keep the build context small. The Dockerfile copies sources explicitly, but
+# trimming the context speeds up `docker build` and avoids leaking local files.
+.git
+.gitignore
+.dockerignore
+.env
+.env.*
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+db/
+*.db
+*.sqlite3
+*.md
+.DS_Store

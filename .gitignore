@@ -1,4 +1,20 @@
+# Secrets — never commit
 .env
+.env.*
+!.env.example
+
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Local SQLite DB (lives on the bot-db Docker volume in prod)
 db/
+*.db
+*.sqlite3
+
+# OS / editor cruft
+.DS_Store
+*.swp
