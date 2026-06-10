@@ -18,3 +18,9 @@ db/
 # OS / editor cruft
 .DS_Store
 *.swp
+
+# Pi-local ops files (auto-deploy script + its log) — NOT part of the bot source
+deploy.sh
+deploy.log
+deploy.log.tmp
+*.db.bak*
