@@ -10,7 +10,7 @@ RUN groupadd -r bot && useradd -r -g bot -d /app -s /sbin/nologin bot
 
 WORKDIR /app
 COPY --from=builder /install /usr/local
-COPY bot.py database.py keyboards.py utils.py ./
+COPY bot.py database.py keyboards.py learning.py utils.py ./
 COPY data/ ./data/
 
 RUN mkdir -p /app/db && chown -R bot:bot /app
