@@ -1,0 +1,4 @@
+services:
+  road-sign-bot:
+    mem_limit: 512m
+    memswap_limit: 640m

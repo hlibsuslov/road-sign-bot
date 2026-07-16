@@ -1,0 +1,18 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-road-sign-bot
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    permissions: {}
+    runs-on: [self-hosted, linux, x64, deploy, road-sign-bot]
+    timeout-minutes: 240
+    steps:
+      - name: Selective deploy (host engine)
+        run: /usr/bin/sudo -n -u deploy /home/deploy/deploy/bin/deploy-trigger road-sign-bot
