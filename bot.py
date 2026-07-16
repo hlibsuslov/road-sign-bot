@@ -39,7 +39,7 @@ from utils import (
     validate_signs_integrity,
 )
 
-# Налаштування логування
+# Налаштування логування (deployment probe 2026-07-16)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
