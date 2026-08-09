@@ -1,10 +1,13 @@
 import ast
+import inspect
 import os
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
 from PIL import Image
+from aiogram.types import InputRichBlockTable, InlineKeyboardButton, Message
+from aiogram.methods import EditMessageText, SendRichMessage
 
 os.environ.setdefault(
     "BOT_TOKEN",
@@ -68,8 +71,8 @@ class KeyboardTests(unittest.TestCase):
 
     def all_inline_markups(self):
         return [
-            get_language_keyboard(include_back=True),
-            get_translation_keyboard(),
+            get_language_keyboard(include_back=True, current_language="no"),
+            get_translation_keyboard(current_language="uk"),
             get_intro_keyboard("100"),
             get_quiz_keyboard("100", ["100", "200"], self.signs, "no"),
             get_feedback_keyboard("100"),
@@ -89,21 +92,29 @@ class KeyboardTests(unittest.TestCase):
         self.assertTrue(markup.is_persistent)
         self.assertFalse(markup.one_time_keyboard)
         self.assertLessEqual(len(markup.input_field_placeholder), 64)
+        self.assertEqual(markup.keyboard[0][0].style, "primary")
         self.assertEqual(
             labels,
             [BTN_STUDY, BTN_STATS, BTN_CATEGORIES, BTN_SETTINGS],
         )
 
     def test_inline_buttons_have_one_action_and_short_callbacks(self):
+        allowed_styles = {None, "primary", "success", "danger"}
         for markup in self.all_inline_markups():
             labels = []
+            primary_count = 0
             for button in inline_buttons(markup):
                 payload = button.model_dump(exclude_none=True)
                 actions = ACTION_FIELDS.intersection(payload)
                 self.assertEqual(actions, {"callback_data"}, payload)
                 self.assertLessEqual(len(button.callback_data.encode("utf-8")), 64)
+                self.assertIn(button.style, allowed_styles)
+                if button.style == "danger":
+                    self.assertEqual(button.callback_data, "reset_confirm")
+                primary_count += button.style == "primary"
                 labels.append(button.text)
             self.assertEqual(len(labels), len(set(labels)), labels)
+            self.assertLessEqual(primary_count, 1)
 
     def test_existing_callback_payloads_are_preserved(self):
         callbacks = {
@@ -143,14 +154,109 @@ class KeyboardTests(unittest.TestCase):
         self.assertEqual([len(row) for row in markup.inline_keyboard], [1, 1])
         self.assertIn("прогрес", markup.inline_keyboard[0][0].text.lower())
         self.assertIn("залишити", markup.inline_keyboard[1][0].text.lower())
+        self.assertEqual(markup.inline_keyboard[0][0].style, "danger")
+        self.assertIsNone(markup.inline_keyboard[1][0].style)
 
     def test_theme_keyboard_reflects_current_state(self):
         markup = get_theme_keyboard("dark")
         self.assertEqual(markup.inline_keyboard[0][0].text, "Світла")
         self.assertEqual(markup.inline_keyboard[0][1].text, "✓ Темна")
+        self.assertIsNone(markup.inline_keyboard[0][0].style)
+        self.assertEqual(markup.inline_keyboard[0][1].style, "success")
+
+    def test_language_keyboards_mark_current_values(self):
+        study = get_language_keyboard(current_language="no")
+        translation = get_translation_keyboard(current_language="uk")
+
+        self.assertTrue(study.inline_keyboard[0][0].text.startswith("✓ "))
+        self.assertEqual(study.inline_keyboard[0][0].style, "success")
+        uk_button = next(
+            button for button in inline_buttons(translation)
+            if button.callback_data == "trans_uk"
+        )
+        self.assertTrue(uk_button.text.startswith("✓ "))
+        self.assertEqual(uk_button.style, "success")
+
+    def test_sdk_exposes_rich_messages_and_button_styles(self):
+        self.assertIn("style", InlineKeyboardButton.model_fields)
+        self.assertTrue(hasattr(Message, "answer_rich"))
+        self.assertIn("rich_message", inspect.signature(Message.answer_rich).parameters)
+        self.assertIn("rich_message", SendRichMessage.model_fields)
+        self.assertIn("rich_message", EditMessageText.model_fields)
 
 
 class MessageTests(unittest.TestCase):
+    def stats_kwargs(self, *, answered=20):
+        return {
+            "mastered": 12,
+            "total": 100,
+            "in_learning": 8,
+            "new": 80,
+            "due_now": 3,
+            "answered": answered,
+            "correct_total": 15 if answered else 0,
+            "today_answered": 4 if answered else 0,
+            "today_correct": 3 if answered else 0,
+            "streak": 2 if answered else 0,
+            "category_rows": [("Попереджувальні <&>", 3, 10), ("Сервіс", 10, 10)],
+        }
+
+    def test_statistics_use_three_native_bordered_tables(self):
+        rich_message = app.build_statistics_rich_message(**self.stats_kwargs())
+        tables = [
+            block for block in rich_message.blocks
+            if isinstance(block, InputRichBlockTable)
+        ]
+
+        self.assertEqual(len(tables), 3)
+        self.assertEqual([table.caption for table in tables], [
+            "Знаки", "Результати", "За категоріями",
+        ])
+        for table in tables:
+            self.assertTrue(table.is_bordered)
+            self.assertTrue(table.is_striped)
+            self.assertTrue(all(cell.is_header for cell in table.cells[0]))
+            self.assertEqual(table.cells[0][1].align, "right")
+
+        self.assertEqual(tables[2].cells[1][0].text, "Попереджувальні <&>")
+        self.assertEqual(tables[2].cells[1][1].text, "3/10 · 30%")
+        payload = rich_message.model_dump(mode="json", exclude_none=True)
+        self.assertEqual(set(payload), {"blocks"})
+        table_payloads = [block for block in payload["blocks"] if block["type"] == "table"]
+        self.assertEqual(len(table_payloads), 3)
+        self.assertIn("cells", table_payloads[0])
+        self.assertNotIn("rows", table_payloads[0])
+
+    def test_statistics_empty_state_and_html_fallback(self):
+        kwargs = self.stats_kwargs(answered=0)
+        rich_message = app.build_statistics_rich_message(**kwargs)
+        fallback = app.build_statistics_text(**kwargs)
+
+        self.assertIn("Ще немає відповідей", rich_message.blocks[-1].text)
+        self.assertIn("Точність: —", fallback)
+        self.assertIn("Попереджувальні &lt;&amp;&gt;", fallback)
+        self.assertNotIn("Попереджувальні <&>", fallback)
+
+    def test_settings_table_contains_only_editable_values(self):
+        user = {
+            "study_language": "no",
+            "translation_language": "uk",
+            "theme": "dark",
+        }
+        rich_message = app.build_settings_rich_message(user)
+        table = next(
+            block for block in rich_message.blocks
+            if isinstance(block, InputRichBlockTable)
+        )
+        rows = [(row[0].text, row[1].text) for row in table.cells[1:]]
+
+        self.assertEqual(rows, [
+            ("Мова знаків", "Норвезька"),
+            ("Переклад", "Українська"),
+            ("Тема карток", "Темна"),
+        ])
+        self.assertNotIn("Вивчено", app.build_settings_text(user))
+
     def test_new_sign_heading_is_not_repeated(self):
         for sign_id in app.signs_main:
             for study_lang in ("no", "en"):

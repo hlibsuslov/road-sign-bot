@@ -13,9 +13,19 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import (
-    Message, CallbackQuery, FSInputFile, BufferedInputFile, ErrorEvent, BotCommand
+    Message,
+    CallbackQuery,
+    FSInputFile,
+    BufferedInputFile,
+    ErrorEvent,
+    BotCommand,
+    InputRichBlockParagraph,
+    InputRichBlockSectionHeading,
+    InputRichBlockTable,
+    InputRichMessage,
+    RichBlockTableCell,
 )
-from aiogram.exceptions import TelegramBadRequest
+from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
 
 import learning
 from database import Database
@@ -78,6 +88,16 @@ BOT_COMMANDS = [
     BotCommand(command="settings", description="Змінити налаштування"),
     BotCommand(command="reset", description="Скинути прогрес"),
 ]
+
+STUDY_LANGUAGE_NAMES = {"no": "Норвезька", "en": "Англійська"}
+TRANSLATION_LANGUAGE_NAMES = {
+    "no": "Норвезька",
+    "en": "Англійська",
+    "ru": "Російська",
+    "uk": "Українська",
+    "none": "Без перекладу",
+}
+THEME_NAMES = {"light": "Світла", "dark": "Темна"}
 
 
 # FSM States (тільки онбординг — навчання stateless, переживає рестарти)
@@ -227,23 +247,174 @@ async def send_study_step(message: Message, user_id: int):
         await message.answer(text, parse_mode=ParseMode.HTML, reply_markup=kb)
 
 
-def build_settings_text(user) -> str:
-    study_lang_names = {"no": "Норвезька", "en": "Англійська"}
-    trans_lang_names = {"no": "Норвезька", "en": "Англійська", "ru": "Російська",
-                        "uk": "Українська", "none": "Без перекладу"}
-    theme_text = "Світла ☀️" if (user["theme"] or 'light') == 'light' else "Темна 🌑"
-    progress_map = db.get_progress_map(user["user_id"])
-    mastered = sum(
-        1 for s, p in progress_map.items()
-        if s in set(VALID_SIGNS) and p["box"] >= learning.MASTERED_BOX
+def rich_cell(value, *, header: bool = False,
+              align: str = "left") -> RichBlockTableCell:
+    """Комірка нативної Telegram-таблиці з явним вирівнюванням."""
+    return RichBlockTableCell(
+        text=str(value),
+        is_header=header or None,
+        align=align,
+        valign="middle",
     )
+
+
+def rich_table(caption: str, headers: tuple[str, str],
+               rows: list[tuple[str, str]]) -> InputRichBlockTable:
+    return InputRichBlockTable(
+        caption=caption,
+        is_bordered=True,
+        is_striped=True,
+        cells=[
+            [rich_cell(headers[0], header=True),
+             rich_cell(headers[1], header=True, align="right")],
+            *[
+                [rich_cell(label), rich_cell(value, align="right")]
+                for label, value in rows
+            ],
+        ],
+    )
+
+
+def settings_values(user) -> list[tuple[str, str]]:
+    theme = user["theme"] or "light"
+    return [
+        ("Мова знаків", STUDY_LANGUAGE_NAMES.get(
+            user["study_language"], user["study_language"]
+        )),
+        ("Переклад", TRANSLATION_LANGUAGE_NAMES.get(
+            user["translation_language"], user["translation_language"]
+        )),
+        ("Тема карток", THEME_NAMES.get(theme, theme)),
+    ]
+
+
+def build_settings_rich_message(user) -> InputRichMessage:
+    return InputRichMessage(blocks=[
+        InputRichBlockSectionHeading(text="⚙️ Налаштування", size=2),
+        rich_table("Поточні значення", ("Параметр", "Значення"), settings_values(user)),
+        InputRichBlockParagraph(text="Оберіть, що змінити. Зміни застосовуються одразу."),
+    ])
+
+
+def build_settings_text(user) -> str:
+    values = settings_values(user)
     return (
         "⚙️ <b>Налаштування</b>\n\n"
-        f"<b>Мова знаків:</b> {h(study_lang_names.get(user['study_language'], user['study_language']))}\n"
-        f"<b>Переклад:</b> {h(trans_lang_names.get(user['translation_language'], user['translation_language']))}\n"
-        f"<b>Тема карток:</b> {h(theme_text)}\n"
-        f"<b>Вивчено:</b> {mastered}/{len(VALID_SIGNS)}"
+        f"<b>{h(values[0][0])}:</b> {h(values[0][1])}\n"
+        f"<b>{h(values[1][0])}:</b> {h(values[1][1])}\n"
+        f"<b>{h(values[2][0])}:</b> {h(values[2][1])}\n\n"
+        "Оберіть, що змінити. Зміни застосовуються одразу."
     )
+
+
+async def answer_settings_screen(message: Message, user) -> None:
+    try:
+        await message.answer_rich(
+            rich_message=build_settings_rich_message(user),
+            reply_markup=get_settings_keyboard(),
+        )
+    except TelegramAPIError as exc:
+        logger.warning("Rich settings fallback: %s", exc)
+        await message.answer(
+            build_settings_text(user),
+            parse_mode=ParseMode.HTML,
+            reply_markup=get_settings_keyboard(),
+        )
+
+
+async def edit_settings_screen(message: Message, user) -> None:
+    try:
+        await message.edit_text(
+            rich_message=build_settings_rich_message(user),
+            reply_markup=get_settings_keyboard(),
+        )
+    except TelegramAPIError as exc:
+        logger.warning("Rich settings edit fallback: %s", exc)
+        await message.edit_text(
+            build_settings_text(user),
+            parse_mode=ParseMode.HTML,
+            reply_markup=get_settings_keyboard(),
+        )
+
+
+def ratio_text(correct: int, answered: int) -> str:
+    if not answered:
+        return "—"
+    return f"{correct}/{answered} · {correct / answered * 100:.0f}%"
+
+
+def days_text(days: int) -> str:
+    if days % 10 == 1 and days % 100 != 11:
+        suffix = "день"
+    elif days % 10 in {2, 3, 4} and days % 100 not in {12, 13, 14}:
+        suffix = "дні"
+    else:
+        suffix = "днів"
+    return f"{days} {suffix}"
+
+
+def build_statistics_rich_message(*, mastered: int, total: int,
+                                  in_learning: int, new: int, due_now: int,
+                                  answered: int, correct_total: int,
+                                  today_answered: int, today_correct: int,
+                                  streak: int,
+                                  category_rows: list[tuple[str, int, int]]) -> InputRichMessage:
+    pct = mastered / total * 100 if total else 0
+    bar = learning.progress_bar(mastered, total)
+    categories = [
+        (name, f"{done}/{cat_total} · {done / cat_total * 100:.0f}%" if cat_total else "—")
+        for name, done, cat_total in category_rows
+    ]
+    blocks = [
+        InputRichBlockSectionHeading(text="📊 Ваш прогрес", size=2),
+        InputRichBlockParagraph(text=f"{bar}  {pct:.0f}% опановано"),
+        rich_table("Знаки", ("Стан", "Кількість"), [
+            ("Вивчено", f"{mastered}/{total}"),
+            ("На вивченні", str(in_learning)),
+            ("Нові", str(new)),
+            ("До повторення", str(due_now)),
+        ]),
+        rich_table("Результати", ("Показник", "Результат"), [
+            ("Точність", ratio_text(correct_total, answered)),
+            ("Сьогодні", ratio_text(today_correct, today_answered)),
+            ("Серія", days_text(streak)),
+        ]),
+        rich_table("За категоріями", ("Категорія", "Вивчено"), categories),
+    ]
+    if not answered:
+        blocks.append(InputRichBlockParagraph(
+            text="Ще немає відповідей. Почніть навчання — тут з’являться точність і серія."
+        ))
+    return InputRichMessage(blocks=blocks)
+
+
+def build_statistics_text(*, mastered: int, total: int,
+                          in_learning: int, new: int, due_now: int,
+                          answered: int, correct_total: int,
+                          today_answered: int, today_correct: int,
+                          streak: int,
+                          category_rows: list[tuple[str, int, int]]) -> str:
+    pct = mastered / total * 100 if total else 0
+    text = (
+        "📊 <b>Ваш прогрес</b>\n\n"
+        f"<code>{h(learning.progress_bar(mastered, total))}</code> {pct:.0f}%\n\n"
+        "<b>Знаки</b>\n"
+        f"Вивчено: {mastered}/{total}\n"
+        f"На вивченні: {in_learning}\n"
+        f"Нові: {new}\n"
+        f"До повторення: {due_now}\n\n"
+        "<b>Результати</b>\n"
+        f"Точність: {h(ratio_text(correct_total, answered))}\n"
+        f"Сьогодні: {h(ratio_text(today_correct, today_answered))}\n"
+        f"Серія: {h(days_text(streak))}\n\n"
+        "<b>За категоріями</b>\n"
+    )
+    for name, done, cat_total in category_rows:
+        cat_pct = done / cat_total * 100 if cat_total else 0
+        text += f"{h(name)}: {done}/{cat_total} · {cat_pct:.0f}%\n"
+    if not answered:
+        text += "\nЩе немає відповідей. Почніть навчання — тут з’являться точність і серія."
+    return text
 
 
 def reset_prompt_text() -> str:
@@ -298,11 +469,12 @@ async def choose_study_language(callback: CallbackQuery, state: FSMContext):
     study_lang = callback.data.split("_")[1]
     await callback.answer()
     await state.update_data(study_language=study_lang)
+    data = await state.get_data()
 
     await callback.message.edit_text(
         "<b>Оберіть мову перекладу:</b>",
         parse_mode=ParseMode.HTML,
-        reply_markup=get_translation_keyboard()
+        reply_markup=get_translation_keyboard(data.get("current_translation_language"))
     )
     await state.set_state(OnboardingStates.choose_translation_language)
 
@@ -314,7 +486,10 @@ async def language_back_callback(callback: CallbackQuery, state: FSMContext):
     await callback.message.edit_text(
         "<b>Оберіть мову назв і квізів:</b>",
         parse_mode=ParseMode.HTML,
-        reply_markup=get_language_keyboard(include_back=data.get("source") == "settings"),
+        reply_markup=get_language_keyboard(
+            include_back=data.get("source") == "settings",
+            current_language=data.get("study_language") or data.get("current_study_language"),
+        ),
     )
     await state.set_state(OnboardingStates.choose_study_language)
 
@@ -331,7 +506,10 @@ async def choose_translation_language(callback: CallbackQuery, state: FSMContext
         await state.clear()
         return
 
-    await callback.answer()
+    if source == "settings":
+        await callback.answer("Мови збережено")
+    else:
+        await callback.answer()
 
     user_id = callback.from_user.id
     db.upsert_user(user_id, study_lang, trans_lang)
@@ -351,11 +529,7 @@ async def choose_translation_language(callback: CallbackQuery, state: FSMContext
 
     if source == "settings":
         user = db.get_user(user_id)
-        await callback.message.edit_text(
-            build_settings_text(user),
-            parse_mode=ParseMode.HTML,
-            reply_markup=get_settings_keyboard(),
-        )
+        await edit_settings_screen(callback.message, user)
         return
 
     await callback.message.edit_text(
@@ -562,30 +736,8 @@ async def cmd_stats(message: Message, state: FSMContext):
     due_now = sum(1 for p in progress_map.values() if p["next_review_at"] <= now)
 
     answered, correct_total = db.get_answer_totals(user_id)
-    accuracy = f"{correct_total / answered * 100:.0f}%" if answered else "—"
     today_answered, today_correct = db.get_day_stats(user_id, date.today().isoformat())
     streak = learning.count_streak(db.get_active_days(user_id))
-
-    pct = mastered / total * 100 if total else 0
-    bar = learning.progress_bar(mastered, total)
-
-    text = (
-        "📊 <b>Ваш прогрес</b>\n\n"
-        f"<code>{bar}</code> {pct:.0f}%\n"
-        f"Вивчено: {mastered}/{total}\n"
-        f"На вивченні: {in_learning}\n"
-        f"Нові: {new}\n"
-        f"До повторення: {due_now}\n\n"
-        "<b>Результати</b>\n"
-    )
-    if answered:
-        text += (
-            f"Точність: {accuracy} ({correct_total}/{answered})\n"
-            f"Серія: {streak} дн.\n"
-            f"Сьогодні: {today_answered} відповідей · {today_correct} правильних\n"
-        )
-    else:
-        text += "Ще немає відповідей. Почніть навчання, щоб побачити точність і серію.\n"
 
     # Розбивка вивченого по категоріях
     cat_totals, cat_mastered, cat_names = {}, {}, {}
@@ -602,17 +754,35 @@ async def cmd_stats(message: Message, state: FSMContext):
         if p and p["box"] >= learning.MASTERED_BOX:
             cat_mastered[code] = cat_mastered.get(code, 0) + 1
 
-    text += "\n<b>За категоріями</b>\n"
-    for code, name in sorted(cat_names.items(), key=lambda x: x[1]):
-        done = cat_mastered.get(code, 0)
-        marker = "✓" if done == cat_totals[code] else "•"
-        text += f"{marker} {h(name)} — {done}/{cat_totals[code]}\n"
-
-    await message.answer(
-        text,
-        parse_mode=ParseMode.HTML,
-        reply_markup=get_main_menu_keyboard(),
-    )
+    category_rows = [
+        (name, cat_mastered.get(code, 0), cat_totals[code])
+        for code, name in sorted(cat_names.items(), key=lambda item: item[1])
+    ]
+    stats_kwargs = {
+        "mastered": mastered,
+        "total": total,
+        "in_learning": in_learning,
+        "new": new,
+        "due_now": due_now,
+        "answered": answered,
+        "correct_total": correct_total,
+        "today_answered": today_answered,
+        "today_correct": today_correct,
+        "streak": streak,
+        "category_rows": category_rows,
+    }
+    try:
+        await message.answer_rich(
+            rich_message=build_statistics_rich_message(**stats_kwargs),
+            reply_markup=get_main_menu_keyboard(),
+        )
+    except TelegramAPIError as exc:
+        logger.warning("Rich statistics fallback: %s", exc)
+        await message.answer(
+            build_statistics_text(**stats_kwargs),
+            parse_mode=ParseMode.HTML,
+            reply_markup=get_main_menu_keyboard(),
+        )
 
 
 # ==================== Категорії ====================
@@ -710,11 +880,7 @@ async def cmd_settings(message: Message, state: FSMContext):
     if not user:
         await message.answer("Спочатку відкрийте /start.")
         return
-    await message.answer(
-        build_settings_text(user),
-        parse_mode=ParseMode.HTML,
-        reply_markup=get_settings_keyboard(),
-    )
+    await answer_settings_screen(message, user)
 
 
 @dp.callback_query(F.data == "settings_back")
@@ -725,11 +891,7 @@ async def settings_back_callback(callback: CallbackQuery, state: FSMContext):
         return
     await callback.answer()
     await state.clear()
-    await callback.message.edit_text(
-        build_settings_text(user),
-        parse_mode=ParseMode.HTML,
-        reply_markup=get_settings_keyboard(),
-    )
+    await edit_settings_screen(callback.message, user)
 
 
 @dp.callback_query(F.data == "change_theme")
@@ -739,11 +901,13 @@ async def change_theme_menu(callback: CallbackQuery):
         await callback.answer("Спочатку /start", show_alert=True)
         return
     await callback.answer()
+    theme = user["theme"] or "light"
     await callback.message.edit_text(
-        "<b>Оберіть тему карток</b>\n\n"
-        "Тема змінює фон зображень дорожніх знаків.",
+        "🎨 <b>Тема карток</b>\n\n"
+        f"Поточна тема: <b>{h(THEME_NAMES.get(theme, theme))}</b>\n"
+        "Вона змінює фон зображень дорожніх знаків.",
         parse_mode=ParseMode.HTML,
-        reply_markup=get_theme_keyboard(user["theme"] or "light"),
+        reply_markup=get_theme_keyboard(theme),
     )
 
 
@@ -754,28 +918,33 @@ async def set_theme_callback(callback: CallbackQuery):
     if not user or theme not in {"light", "dark"}:
         await callback.answer("Не вдалося змінити тему. Відкрийте налаштування заново.", show_alert=True)
         return
-    await callback.answer()
+    await callback.answer(f"Тему змінено: {THEME_NAMES[theme].lower()}")
     db.update_user_theme(callback.from_user.id, theme)
     user = db.get_user(callback.from_user.id)
-    await callback.message.edit_text(
-        build_settings_text(user),
-        parse_mode=ParseMode.HTML,
-        reply_markup=get_settings_keyboard(),
-    )
+    await edit_settings_screen(callback.message, user)
 
 
 @dp.callback_query(F.data == "change_language")
 async def change_language_handler(callback: CallbackQuery, state: FSMContext):
-    if db.get_user(callback.from_user.id) is None:
+    user = db.get_user(callback.from_user.id)
+    if user is None:
         await callback.answer("Спочатку /start", show_alert=True)
         return
     await callback.answer()
-    await state.set_data({"source": "settings"})
+    await state.set_data({
+        "source": "settings",
+        "current_study_language": user["study_language"],
+        "current_translation_language": user["translation_language"],
+    })
     await state.set_state(OnboardingStates.choose_study_language)
     await callback.message.edit_text(
-        "<b>Оберіть мову назв і квізів:</b>",
+        "🌐 <b>Мова знаків</b>\n\n"
+        "Оберіть мову назв і варіантів відповіді:",
         parse_mode=ParseMode.HTML,
-        reply_markup=get_language_keyboard(include_back=True),
+        reply_markup=get_language_keyboard(
+            include_back=True,
+            current_language=user["study_language"],
+        ),
     )
 
 
@@ -839,15 +1008,19 @@ async def study_language_prompt(message: Message, state: FSMContext):
     data = await state.get_data()
     await message.answer(
         "Оберіть мову кнопкою нижче.",
-        reply_markup=get_language_keyboard(include_back=data.get("source") == "settings"),
+        reply_markup=get_language_keyboard(
+            include_back=data.get("source") == "settings",
+            current_language=data.get("study_language") or data.get("current_study_language"),
+        ),
     )
 
 
 @dp.message(StateFilter(OnboardingStates.choose_translation_language))
-async def translation_language_prompt(message: Message):
+async def translation_language_prompt(message: Message, state: FSMContext):
+    data = await state.get_data()
     await message.answer(
         "Оберіть мову перекладу кнопкою нижче.",
-        reply_markup=get_translation_keyboard(),
+        reply_markup=get_translation_keyboard(data.get("current_translation_language")),
     )
 
 
