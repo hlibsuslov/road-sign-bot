@@ -11,6 +11,11 @@ import logging
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 logger = logging.getLogger(__name__)
 
+IMAGE_PADDING_RATIO = 0.05
+# Telegram дозволяє до 10 000 px за сумою ширини й висоти. Квадрат 2048 px
+# має великий запас, достатню якість для картки та менше навантажує RAM.
+MAX_SIGN_CANVAS_SIZE = 2048
+
 def get_path(rel_path: str) -> str:
     """Отримує абсолютний шлях до файлу"""
     return os.path.join(BASE_DIR, rel_path)
@@ -108,31 +113,46 @@ def process_sign_image(image_path: str, theme: str = 'light') -> Optional[BytesI
         with Image.open(image_path) as img:
             # Конвертуємо в RGBA для коректної обробки прозорості
             img = img.convert("RGBA")
-            
+
             # Визначаємо розміри
             w, h = img.size
             max_dim = max(w, h)
-            
-            # Додаємо невеликий відступ (наприклад 5% від розміру)
-            padding = int(max_dim * 0.05)
+
+            # Великі вихідні JPEG раніше давали квадрати >5000 px,
+            # які Telegram відхиляв з PHOTO_INVALID_DIMENSIONS.
+            max_content_size = int(
+                MAX_SIGN_CANVAS_SIZE / (1 + 2 * IMAGE_PADDING_RATIO)
+            )
+            if max_dim > max_content_size:
+                scale = max_content_size / max_dim
+                resized = (
+                    max(1, round(w * scale)),
+                    max(1, round(h * scale)),
+                )
+                img = img.resize(resized, Image.Resampling.LANCZOS)
+                w, h = img.size
+                max_dim = max(w, h)
+
+            # Додаємо 5% відступу з кожного боку.
+            padding = max(1, int(max_dim * IMAGE_PADDING_RATIO))
             canvas_size = max_dim + (padding * 2)
-            
+
             # Визначаємо колір фону залежно від теми
             if theme == 'dark':
-                bg_color = (43, 43, 43) # Темно-сірий (Dark Grey)
+                bg_color = (43, 43, 43)  # Темно-сірий (Dark Grey)
             else:
-                bg_color = (255, 255, 255) # Білий
-            
+                bg_color = (255, 255, 255)  # Білий
+
             # Створюємо фон
             bg = Image.new('RGB', (canvas_size, canvas_size), bg_color)
-            
+
             # Центруємо зображення
             pos = ((canvas_size - w) // 2, (canvas_size - h) // 2)
             bg.paste(img, pos, mask=img)
-            
+
             # Зберігаємо в буфер
             output = BytesIO()
-            bg.save(output, format='JPEG', quality=95)
+            bg.save(output, format='JPEG', quality=92, optimize=True)
             output.seek(0)
             return output
     except Exception as e:
