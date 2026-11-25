@@ -15,6 +15,10 @@ share one SQLite database and one copy of the sign catalogue.
   GET /api/exam/<id>/<n>.webp  question image by position (the URL doesn't name the sign)
   POST /api/exam/finish      grade once, store, send the result to the chat
   POST /api/premium/invoice  Stars subscription link for Telegram.WebApp.openInvoice
+  GET /api/theory            topics for the user's licence class, with progress
+  GET /api/theory/<topic>    questions of a topic (no answers), premium
+  POST /api/theory/answer    check one answer on the server, store progress
+  POST /api/profile          licence class, exam date, daily goal, reminders, time zone
 
 Private endpoints trust nothing from the client except initData, checked with the bot
 token (HMAC, references/mini-apps/security.md): `Authorization: tma <initData>`.
@@ -35,6 +39,7 @@ from aiohttp import web
 
 import learning
 import premium
+import theory
 from init_data import InitDataError, verify_hmac
 from utils import cutout_manifest, sign_scale
 
@@ -45,6 +50,8 @@ WEBAPP = BASE / "webapp"
 CUTOUTS = BASE / "data" / "cutouts"
 SIGN_ID = re.compile(r"[0-9]{3}_[0-9A-Z]{1,4}")
 EXAM_ID = re.compile(r"[A-Za-z0-9_-]{22}")
+DATE = re.compile(r"20[2-9][0-9]-[01][0-9]-[0-3][0-9]")
+TIMEZONE = re.compile(r"[A-Za-z_]{2,32}(/[A-Za-z0-9_+-]{2,32}){0,2}")
 INIT_DATA_MAX_AGE = 24 * 3600   # learning data; the invoice itself is checked by Telegram
 EXAM_SIZES = (10, 20, 45)       # 45 = the real teoriprøven length
 EXAM_SECONDS_PER_QUESTION = 60
@@ -83,6 +90,9 @@ def create_app(*, db, bot_token: str, get_catalog, signs_main: dict, get_valid,
     built after the image check at startup. bot (optional) creates invoice links and
     sends test results to the chat."""
     invoice_at: dict[int, float] = {}
+    topics_data, questions = theory.load()
+    by_question = {q["id"]: q for q in questions}
+    licence_classes = set(topics_data["classes"])
 
     @web.middleware
     async def security_headers(request: web.Request, handler):
@@ -189,6 +199,13 @@ def create_app(*, db, bot_token: str, get_catalog, signs_main: dict, get_valid,
             "streak": learning.count_streak(db.get_active_days(user_id)),
             "progress": progress,
             "pool": len(pool_for(user)),
+            "profile": {
+                "first_name": user["first_name"], "username": user["username"],
+                "member_since": user["created_at"], "licence_class": user["licence_class"],
+                "exam_date": user["exam_date"], "daily_goal": user["daily_goal"],
+                "reminders": bool(user["reminders"]), "timezone": user["timezone"],
+            },
+            "today": db.get_day_stats(user_id, time.strftime("%Y-%m-%d"))[0],
             "premium": premium.status(db, user_id),
             "exams": [{"correct": r["correct"], "total": r["total"], "finished_at": r["finished_at"],
                        "passed": r["correct"] >= r["total"] * EXAM_PASS_RATIO}
@@ -339,6 +356,91 @@ def create_app(*, db, bot_token: str, get_catalog, signs_main: dict, get_valid,
                 logger.info("Mini App: test result not sent to chat (%s)", exc)
         return no_store(result)
 
+    # ------------------------------------------------------------ theory
+
+    def topic_list(licence_class: str, done: dict) -> list:
+        mine = theory.for_class(questions, licence_class)
+        out = []
+        for t in sorted(topics_data["topics"], key=lambda t: t["order"]):
+            if t.get("classes") and licence_class not in t["classes"]:
+                continue
+            qs = [q for q in mine if q["topic"] == t["id"]]
+            if t["kind"] == "questions" and not qs:
+                continue
+            out.append({**{k: t[k] for k in ("id", "icon", "kind", "names", "summary")},
+                        "count": len(qs),
+                        "solved": sum(1 for q in qs if q["id"] in done and done[q["id"]]["last_correct"])})
+        return out
+
+    async def theory_topics(request: web.Request):
+        user_id = user_id_from(request)
+        user = registered_user(user_id)
+        return no_store({"classes": topics_data["classes"], "licence_class": user["licence_class"],
+                         "topics": topic_list(user["licence_class"], db.theory_progress(user_id))})
+
+    async def theory_questions(request: web.Request):
+        user_id = user_id_from(request)
+        user = registered_user(user_id)
+        require_premium(user_id)
+        topic = request.match_info["topic"]
+        qs = [q for q in theory.for_class(questions, user["licence_class"]) if q["topic"] == topic]
+        if not qs:
+            raise web.HTTPNotFound(text="no such topic")
+        done = db.theory_progress(user_id)
+        # unsolved first, then the rest; the order inside each group is random
+        random.shuffle(qs)
+        qs.sort(key=lambda q: bool(done.get(q["id"]) and done[q["id"]]["last_correct"]))
+        return no_store({"topic": topic, "questions": [theory.public(q) for q in qs]})
+
+    async def theory_answer(request: web.Request):
+        user_id = user_id_from(request)
+        registered_user(user_id)
+        require_premium(user_id)
+        data = await body(request)
+        q = by_question.get(data.get("question_id")) if isinstance(data.get("question_id"), str) else None
+        chosen = data.get("chosen")
+        if q is None:
+            raise web.HTTPBadRequest(text="unknown question")
+        option_ids = {o["id"] for o in q["options"]}
+        if (not isinstance(chosen, list) or not chosen or len(chosen) > len(option_ids)
+                or not all(isinstance(c, str) and c in option_ids for c in chosen)):
+            raise web.HTTPBadRequest(text="chosen: list of option ids")
+        correct = set(chosen) == set(q["correct"])
+        db.record_theory_answer(user_id, q["id"], correct)
+        return no_store({"correct": correct, "correct_ids": q["correct"],
+                         "explanation": q["explanation"], "source": q["source"]})
+
+    # ------------------------------------------------------------ profile
+
+    async def profile_update(request: web.Request):
+        user_id = user_id_from(request)
+        registered_user(user_id)
+        data = await body(request)
+        fields = {}
+        if "licence_class" in data:
+            if data["licence_class"] not in licence_classes:
+                raise web.HTTPBadRequest(text="unknown licence class")
+            fields["licence_class"] = data["licence_class"]
+        if "exam_date" in data:
+            value = data["exam_date"]
+            if value is not None and not (isinstance(value, str) and DATE.fullmatch(value)):
+                raise web.HTTPBadRequest(text="exam_date: YYYY-MM-DD or null")
+            fields["exam_date"] = value
+        if "daily_goal" in data:
+            if type(data["daily_goal"]) is not int or not 5 <= data["daily_goal"] <= 100:
+                raise web.HTTPBadRequest(text="daily_goal: 5-100")
+            fields["daily_goal"] = data["daily_goal"]
+        if "reminders" in data:
+            if not isinstance(data["reminders"], bool):
+                raise web.HTTPBadRequest(text="reminders: true/false")
+            fields["reminders"] = int(data["reminders"])
+        if "timezone" in data:
+            if not (isinstance(data["timezone"], str) and TIMEZONE.fullmatch(data["timezone"])):
+                raise web.HTTPBadRequest(text="timezone: IANA name")
+            fields["timezone"] = data["timezone"]
+        db.update_profile(user_id, fields)
+        return no_store({"ok": True})
+
     # ------------------------------------------------------------ premium
 
     async def premium_invoice(request: web.Request):
@@ -368,6 +470,10 @@ def create_app(*, db, bot_token: str, get_catalog, signs_main: dict, get_valid,
     app.router.add_get("/api/exam/{exam_id}/{n}.webp", exam_image)
     app.router.add_post("/api/exam/finish", exam_finish)
     app.router.add_post("/api/premium/invoice", premium_invoice)
+    app.router.add_get("/api/theory", theory_topics)
+    app.router.add_get("/api/theory/{topic}", theory_questions)
+    app.router.add_post("/api/theory/answer", theory_answer)
+    app.router.add_post("/api/profile", profile_update)
     app.router.add_static("/dist", WEBAPP / "dist")
     app.router.add_static("/_kit", WEBAPP / "_kit")
     return app

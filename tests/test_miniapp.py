@@ -173,6 +173,47 @@ class MiniAppServerTests(AioHTTPTestCase):
         floaty = await self.client.post("/api/exam/start", json={"size": 10.0}, headers=self.auth())
         self.assertEqual(floaty.status, 400)
 
+    async def test_theory_hides_answers_and_grades_on_the_server(self):
+        topics = await (await self.client.get("/api/theory", headers=self.auth())).json()
+        ids = [t["id"] for t in topics["topics"]]
+        self.assertIn("vikeplikt", ids)
+        self.assertNotIn("tohjul", ids)                    # class B by default: no moped topic
+        resp = await self.client.get("/api/theory/vikeplikt", headers=self.auth())
+        qs = (await resp.json())["questions"]
+        self.assertTrue(qs)
+        self.assertTrue(all("correct" not in q and "explanation" not in q for q in qs))
+
+        wrong = await self.client.post("/api/theory/answer", headers=self.auth(),
+                                       json={"question_id": "vik-001", "chosen": ["b"]})
+        self.assertFalse((await wrong.json())["correct"])
+        right = await self.client.post("/api/theory/answer", headers=self.auth(),
+                                       json={"question_id": "vik-001", "chosen": ["a"]})
+        body = await right.json()
+        self.assertTrue(body["correct"])
+        self.assertEqual(body["correct_ids"], ["a"])
+        multi = await self.client.post("/api/theory/answer", headers=self.auth(),
+                                       json={"question_id": "fart-004", "chosen": ["a"]})
+        self.assertFalse((await multi.json())["correct"])  # all correct options are required
+        bad = await self.client.post("/api/theory/answer", headers=self.auth(),
+                                     json={"question_id": "vik-001", "chosen": ["z"]})
+        self.assertEqual(bad.status, 400)
+        self.assertEqual(self.db.theory_progress(42)["vik-001"]["correct_count"], 1)
+
+    async def test_profile_accepts_only_valid_fields(self):
+        ok = await self.client.post("/api/profile", headers=self.auth(), json={
+            "licence_class": "A1", "exam_date": "2027-03-01", "daily_goal": 20,
+            "reminders": False, "timezone": "Europe/Oslo"})
+        self.assertEqual(ok.status, 200)
+        me = await (await self.client.get("/api/me", headers=self.auth())).json()
+        self.assertEqual(me["profile"]["licence_class"], "A1")
+        self.assertEqual(me["profile"]["timezone"], "Europe/Oslo")
+        topics = await (await self.client.get("/api/theory", headers=self.auth())).json()
+        self.assertIn("tohjul", [t["id"] for t in topics["topics"]])
+        for bad in ({"licence_class": "Z"}, {"exam_date": "tomorrow"}, {"daily_goal": 1000},
+                    {"timezone": "../../etc"}, {"reminders": "yes"}):
+            resp = await self.client.post("/api/profile", headers=self.auth(), json=bad)
+            self.assertEqual(resp.status, 400, bad)
+
     async def test_open_tests_are_limited(self):
         for _ in range(miniapp_server.EXAM_MAX_OPEN):
             ok = await self.client.post("/api/exam/start", json={"size": 10}, headers=self.auth())
@@ -239,6 +280,16 @@ class PremiumTests(unittest.TestCase):
         self.assertFalse(premium.is_premium(self.db, 5))
         premium.apply_payment(self.db, 5, self.payment("c2", now - 60))
         self.assertTrue(premium.is_premium(self.db, 5))                  # a renewal may arrive late
+
+
+
+class TheoryBankTests(unittest.TestCase):
+    def test_bank_is_consistent(self):
+        import theory
+        topics, questions = theory.load()
+        errors = theory.validate(topics, questions, set(load_signs_main()))
+        self.assertEqual(errors, [])
+        self.assertGreaterEqual(len(questions), 15)
 
 
 if __name__ == "__main__":

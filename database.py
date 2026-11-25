@@ -6,7 +6,26 @@ from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
+
+# Профіль користувача (v4). Лише поля з явною метою: звертання, мова, нагадування у
+# зручний час, план підготовки. Без історії імен (references/user-profile.md §0).
+PROFILE_COLUMNS = (
+    ("first_name", "TEXT"),
+    ("last_name", "TEXT"),
+    ("username", "TEXT"),
+    ("language_code", "TEXT"),
+    ("is_tg_premium", "INTEGER NOT NULL DEFAULT 0"),
+    ("profile_updated_at", "INTEGER"),
+    ("acq_kind", "TEXT NOT NULL DEFAULT 'organic'"),
+    ("acq_value", "TEXT"),
+    ("timezone", "TEXT"),
+    ("reminders", "INTEGER NOT NULL DEFAULT 1"),
+    ("licence_class", "TEXT NOT NULL DEFAULT 'B'"),
+    ("exam_date", "TEXT"),
+    ("daily_goal", "INTEGER NOT NULL DEFAULT 10"),
+)
+PROFILE_EDITABLE = {"timezone", "reminders", "licence_class", "exam_date", "daily_goal"}
 
 
 class Database:
@@ -22,6 +41,11 @@ class Database:
       payments      — кожен платіж Stars один раз (ключ — telegram_payment_charge_id)
       subscriptions — поточна підписка користувача (термін — з successful_payment)
       exams         — тести в Mini App: питання, відповіді, результат
+    v4:
+      users + профіль (telegram-bot-ui references/user-profile.md): ім'я, username,
+              мова клієнта, звідки прийшов (/start payload), часовий пояс, нагадування,
+              категорія прав, дата іспиту, денна мета
+      theory_answers — прогрес по питаннях теорії
     """
 
     def __init__(self, db_path: str = "road_signs_bot.db"):
@@ -166,6 +190,24 @@ class Database:
             )
         """)
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_exams_user ON exams (user_id, created_at)")
+
+        # v4: профіль і теорія
+        cols = {r["name"] for r in cursor.execute("PRAGMA table_info(users)")}
+        for name, ddl in PROFILE_COLUMNS:
+            if name not in cols:
+                cursor.execute(f"ALTER TABLE users ADD COLUMN {name} {ddl}")
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS theory_answers (
+                user_id INTEGER NOT NULL,
+                question_id TEXT NOT NULL,
+                correct_count INTEGER NOT NULL DEFAULT 0,
+                wrong_count INTEGER NOT NULL DEFAULT 0,
+                last_correct INTEGER NOT NULL DEFAULT 0,
+                last_at INTEGER NOT NULL,
+                PRIMARY KEY (user_id, question_id),
+                FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
+            )
+        """)
 
     # ==================== Користувачі ====================
 
@@ -446,3 +488,74 @@ class Database:
                 WHERE user_id = ? AND finished_at IS NOT NULL
                 ORDER BY finished_at DESC LIMIT ?
             """, (user_id, limit)).fetchall()
+
+    # ==================== Профіль ====================
+
+    def touch_identity(self, user_id: int, *, first_name: str, last_name: Optional[str],
+                       username: Optional[str], language_code: Optional[str], is_premium: bool) -> None:
+        """Поточний знімок з Telegram (без історії). Пише лише коли щось змінилося."""
+        now = int(time.time())
+        with self.get_connection() as conn:
+            conn.execute("""
+                UPDATE users SET first_name = ?, last_name = ?, username = ?, language_code = ?,
+                       is_tg_premium = ?, profile_updated_at = ?, last_active_at = ?
+                WHERE user_id = ? AND (
+                    first_name IS NOT ? OR last_name IS NOT ? OR username IS NOT ?
+                    OR language_code IS NOT ? OR is_tg_premium IS NOT ?)
+            """, (first_name, last_name, username, language_code, int(is_premium), now, now,
+                  user_id, first_name, last_name, username, language_code, int(is_premium)))
+            conn.commit()
+
+    def set_acquisition(self, user_id: int, kind: str, value: Optional[str]) -> None:
+        """Звідки прийшов користувач. Пишеться один раз і не перезаписується."""
+        with self.get_connection() as conn:
+            conn.execute(
+                "UPDATE users SET acq_kind = ?, acq_value = ? WHERE user_id = ? AND acq_kind = 'organic' AND acq_value IS NULL",
+                (kind, value, user_id),
+            )
+            conn.commit()
+
+    def update_profile(self, user_id: int, fields: Dict) -> None:
+        fields = {k: v for k, v in fields.items() if k in PROFILE_EDITABLE}
+        if not fields:
+            return
+        sets = ", ".join(f"{k} = ?" for k in fields)
+        with self.get_connection() as conn:
+            conn.execute(f"UPDATE users SET {sets} WHERE user_id = ?", (*fields.values(), user_id))
+            conn.commit()
+
+    def delete_user_data(self, user_id: int) -> None:
+        """/deletedata: профіль, прогрес, статистика, тести. Платежі лишаються для обліку."""
+        with self.get_connection() as conn:
+            for table in ("theory_answers", "exams", "sign_progress", "daily_stats", "users"):
+                conn.execute(f"DELETE FROM {table} WHERE user_id = ?", (user_id,))
+            conn.commit()
+
+    # ==================== Теорія ====================
+
+    def record_theory_answer(self, user_id: int, question_id: str, correct: bool) -> None:
+        now = int(time.time())
+        today = date.today().isoformat()
+        with self.get_connection() as conn:
+            conn.execute("""
+                INSERT INTO theory_answers (user_id, question_id, correct_count, wrong_count, last_correct, last_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT (user_id, question_id) DO UPDATE SET
+                    correct_count = correct_count + excluded.correct_count,
+                    wrong_count = wrong_count + excluded.wrong_count,
+                    last_correct = excluded.last_correct,
+                    last_at = excluded.last_at
+            """, (user_id, question_id, int(correct), int(not correct), int(correct), now))
+            conn.execute("""
+                INSERT INTO daily_stats (user_id, day, answered, correct) VALUES (?, ?, 1, ?)
+                ON CONFLICT (user_id, day) DO UPDATE SET
+                    answered = answered + 1, correct = correct + excluded.correct
+            """, (user_id, today, int(correct)))
+            conn.commit()
+
+    def theory_progress(self, user_id: int) -> Dict[str, sqlite3.Row]:
+        with self.get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM theory_answers WHERE user_id = ?", (user_id,)
+            ).fetchall()
+            return {r["question_id"]: r for r in rows}
