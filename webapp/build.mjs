@@ -7,8 +7,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const FILES = { 'app.ts': 'app.js', '_kit/tma.ts': 'tma.js' };
-const KIT_IMPORT = /from\s+['"]\.\/_kit\/([\w-]+)\.ts['"]/g;
+const FILES = { 'app.ts': 'app.js', 'scene.ts': 'scene.js', '_kit/tma.ts': 'tma.js' };
+const KIT_IMPORT = /from\s+['"]\.\/(?:_kit\/)?([\w-]+)\.ts['"]/g;  // flat dist/: ./x.ts and ./_kit/x.ts -> ./x.js
 
 process.removeAllListeners('warning'); // stripTypeScriptTypes is marked experimental
 const check = process.argv.includes('--check');

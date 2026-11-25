@@ -39,3 +39,26 @@
 .result-thumb .sign-art { border-radius: 10px; }
 /* Dark theme: black parts of signs (chevrons, frames, symbols) need a lighter plate to stay visible. */
 :root[data-tma-scheme="dark"] .sign-art { background: color-mix(in srgb, var(--tma-surface) 80%, #fff); }
+
+/* Situation scenes (scene.ts): derived from the theme; literal colours only where the real
+   world fixes them (white road markings, amber hazard lights, grass). */
+:root {
+  --scene-grass: color-mix(in srgb, #6fa55a 38%, var(--tma-bg));
+  --scene-road: color-mix(in srgb, var(--tma-text) 52%, var(--tma-bg));
+  --scene-line: #fff; --scene-zebra: #fff; --scene-hazard: #f2a900;
+  --scene-you: var(--tma-accent);
+  --scene-car: color-mix(in srgb, #e39b2d 85%, var(--tma-text));
+  --scene-glass: color-mix(in srgb, var(--tma-bg) 75%, transparent);
+  --scene-outline: var(--tma-text); --scene-person: var(--tma-text); --scene-label: var(--tma-text);
+}
+.scene-box { margin: var(--tma-s2) auto 0; width: min(320px, 86vw); border-radius: var(--tma-r-inner); overflow: hidden; }
+.scene { display: block; width: 100%; height: auto; }
+.topic-icon { display: grid; place-items: center; flex: 0 0 36px; height: 36px; border-radius: 10px; background: var(--tma-tonal); color: var(--tma-accent-text); }
+.profile-card { gap: var(--tma-s3); }
+.profile-head { display: flex; align-items: center; gap: var(--tma-s3); }
+.profile-avatar { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; flex: 0 0 64px; }
+.profile-avatar.is-initials { display: grid; place-items: center; background: var(--tma-tonal); color: var(--tma-accent-text); font-weight: 700; font-size: 1.25rem; }
+.profile-toggle { display: flex; align-items: center; justify-content: space-between; gap: var(--tma-s3); min-height: var(--tma-row); }
+
+/* the kit gives the tab bar display:flex, which beats [hidden] */
+.tma-tabbar[hidden] { display: none; }

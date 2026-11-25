@@ -3,6 +3,7 @@
 // checked on the server. Answers to a test never reach the client before it is finished.
 // Text goes through textContent only; nothing from data is parsed as markup.
 import { createTma, parseStartParam } from './_kit/tma.ts';
+import { renderScene, type SceneSpec } from './scene.ts';
 
 type Lang = 'no' | 'en' | 'uk' | 'ru';
 type Texts = Partial<Record<Lang, string>>;
@@ -15,7 +16,15 @@ type Me = {
   registered: boolean; study_language?: Lang; translation_language?: Lang | 'none';
   mastered_box?: number; max_box?: number; answered?: number; correct?: number; streak?: number;
   progress?: Record<string, Progress>; pool?: number; premium?: PremiumStatus; exams?: ExamSummary[];
+  profile?: Profile; today?: number;
 };
+type Profile = { first_name: string | null; username: string | null; member_since: number; licence_class: string;
+  exam_date: string | null; daily_goal: number; reminders: boolean; timezone: string | null };
+type Topic = { id: string; icon: string; kind: 'signs' | 'questions'; names: Texts; summary: Texts; count: number; solved: number };
+type TheoryIndex = { classes: Record<string, Texts>; licence_class: string; topics: Topic[] };
+type Question = { id: string; topic: string; type: 'single' | 'multi'; difficulty: number; image: (SceneSpec | { sign: string }) | null;
+  text: Texts; options: { id: string; text: Texts }[] };
+type Verdict = { correct: boolean; correct_ids: string[]; explanation: Texts; source: string };
 type Step = { mode: 'review'; sign_id: string; options: string[]; box: number }
   | { mode: 'new'; sign_id: string }
   | { mode: 'done'; queued: number; next_in: number | null };
@@ -36,6 +45,7 @@ let tab: Tab = 'signs';
 let category = 'all';
 let query = '';
 let examSize = 20;
+let theoryIndex: TheoryIndex | null = null;
 
 const studyLang = (): Lang => me.study_language ?? 'no';
 const transLang = (): Lang | null => {
@@ -274,12 +284,120 @@ function studyRoot(): Kid[] {
   const due = Object.values(me.progress ?? {}).filter((p) => p.due).length;
   const pool = me.pool ?? signs.length;
   const known = Object.keys(me.progress ?? {}).length;
-  tma.mainButton({ text: due ? `Почати · ${due} до повторення` : 'Почати навчання', onClick: () => openStudy() });
+  tma.mainButton({ text: due ? `Знаки · ${due} до повторення` : 'Вчити знаки', onClick: () => openStudy() });
+  const topics = h('ul', { class: 'tma-list' }, h('li', {}, h('p', { class: 'tma-hint', style: 'margin:0;padding:var(--tma-s3) var(--tma-s4)' }, 'Завантаження тем…')));
+  void loadTopics(topics);
   return [largeTitle('Навчання'),
     h('section', { class: 'tma-card' },
-      h('p', { class: 'tma-headline', style: 'margin:0' }, due ? `${due} ${plural(due, 'знак чекає', 'знаки чекають', 'знаків чекають')} на повторення` : 'Повторень на зараз немає'),
+      h('p', { class: 'tma-headline', style: 'margin:0' }, due ? `${due} ${plural(due, 'знак чекає', 'знаки чекають', 'знаків чекають')} на повторення` : 'Повторень знаків на зараз немає'),
       h('p', { class: 'tma-hint', style: 'margin:0' }, `У добірці ${pool} ${plural(pool, 'знак', 'знаки', 'знаків')}, ви вже бачили ${known}. Спершу повторення, потім нові знаки.`)),
-    h('p', { class: 'tma-footnote', style: 'padding:0 var(--tma-s4)' }, 'Прогрес спільний із чатом. Категорії — в боті: /categories.')];
+    h('section', { class: 'tma-section', 'aria-labelledby': 'topics-h', style: 'margin-top:var(--tma-gap-section)' },
+      h('h2', { class: 'tma-section__header', id: 'topics-h' }, 'Теорія за темами'), topics),
+    h('p', { class: 'tma-footnote', style: 'padding:0 var(--tma-s4)' }, 'Прогрес спільний із чатом. Категорія прав — у розділі «Прогрес».')];
+}
+
+async function loadTopics(list: HTMLElement): Promise<void> {
+  try {
+    theoryIndex = await api<TheoryIndex>('/api/theory');
+  } catch {
+    list.replaceChildren(h('li', {}, h('p', { class: 'tma-hint', style: 'margin:0;padding:var(--tma-s3) var(--tma-s4)' }, 'Теми не завантажились. Відкрийте розділ ще раз.')));
+    return;
+  }
+  list.replaceChildren(...theoryIndex.topics.map((t) => h('li', {}, h('button', { class: 'tma-cell is-2', type: 'button',
+    onclick: on(() => { tma.haptic.tap(); if (t.kind === 'signs') openStudy(); else void openTheory(t); }) },
+    h('span', { class: 'topic-icon' }, icon(t.icon)),
+    h('span', { class: 'tma-cell__body' }, h('span', { class: 'tma-cell__title' }, text(t.names, 'uk')),
+      h('span', { class: 'tma-cell__subtitle' }, text(t.summary, 'uk'))),
+    h('span', { class: 'tma-cell__after' }, t.kind === 'signs' ? `${signs.length}` : `${t.solved}/${t.count}`)))));
+}
+
+/* ---------------------------------------------------------------- theory practice */
+function questionImage(q: Question): Kid {
+  if (!q.image) return '';
+  if ('sign' in q.image) {
+    const s = byId.get(q.image.sign);
+    return s ? art(s, true) : '';
+  }
+  return h('div', { class: 'scene-box' }, renderScene(q.image, 'Схема ситуації на дорозі'));
+}
+
+async function openTheory(topic: Topic): Promise<void> {
+  let questions: Question[];
+  try {
+    questions = (await api<{ questions: Question[] }>(`/api/theory/${encodeURIComponent(topic.id)}`)).questions;
+  } catch (e) {
+    if (e instanceof ApiErr && e.code === 'premium_required') { await refreshMe(); renderRoot(); return; }
+    toast('Не вдалося відкрити тему. Спробуйте ще раз.');
+    return;
+  }
+  const el = openScreen(async () => { await refreshMe(); closeScreen(); });
+  let i = 0;
+  let right = 0;
+  const counter = h('p', { class: 'tma-footnote', style: 'text-align:center;margin:0', 'aria-live': 'polite' });
+  const body = h('div', {});
+  el.append(h('p', { class: 'tma-tag', style: 'text-align:center;margin:var(--tma-s2) 0 0' }, text(topic.names, 'uk')), counter, body);
+
+  function draw(): void {
+    tma.mainButton(null);
+    if (i >= questions.length) {
+      counter.textContent = '';
+      body.replaceChildren(placeholder(`${right} з ${questions.length} правильно`,
+        right === questions.length ? 'Тему пройдено без помилок.' : 'Питання з помилками повернуться першими наступного разу.'));
+      tma.mainButton({ text: 'Готово', onClick: async () => { await refreshMe(); closeScreen(); } });
+      return;
+    }
+    const q = questions[i];
+    counter.textContent = `Питання ${i + 1} з ${questions.length}`;
+    const trans = transLang();
+    const picked = new Set<string>();
+    const buttons = q.options.map((o) => h('button', { class: 'quiz-option', type: 'button', 'data-id': o.id, 'aria-pressed': 'false' }, text(o.text)) as HTMLButtonElement);
+    const feedback = h('div', { 'aria-live': 'polite' });
+    body.replaceChildren(
+      questionImage(q),
+      h('h1', { class: 'tma-title3', style: 'margin:var(--tma-s3) 0 0' }, text(q.text)),
+      trans ? h('p', { class: 'tma-hint', style: 'margin:var(--tma-s1) 0 0' }, text(q.text, trans)) : '',
+      q.type === 'multi' ? h('p', { class: 'tma-footnote', style: 'margin:var(--tma-s1) 0 0' }, 'Оберіть усі правильні відповіді') : '',
+      h('div', { class: 'quiz-options', role: 'group', 'aria-label': 'Варіанти відповіді' }, ...buttons),
+      feedback);
+
+    async function check(): Promise<void> {
+      for (const b of buttons) b.disabled = true;
+      let v: Verdict;
+      try {
+        v = await api<Verdict>('/api/theory/answer', { method: 'POST', body: { question_id: q.id, chosen: [...picked] } });
+      } catch {
+        for (const b of buttons) b.disabled = false;
+        toast('Відповідь не збережено. Спробуйте ще раз.');
+        return;
+      }
+      if (v.correct) right++;
+      for (const b of buttons) {
+        const id = b.dataset.id ?? '';
+        if (v.correct_ids.includes(id)) { b.classList.add('is-correct'); b.prepend(h('span', { class: 'quiz-mark' }, 'Правильно · ')); }
+        else if (picked.has(id)) { b.classList.add('is-wrong'); b.prepend(h('span', { class: 'quiz-mark' }, 'Ваша відповідь · ')); }
+      }
+      if (v.correct) tma.haptic.success(); else tma.haptic.error();
+      feedback.replaceChildren(h('section', { class: 'tma-card', style: 'margin-top:var(--tma-s4)' },
+        h('p', { class: 'tma-headline', style: 'margin:0' }, v.correct ? 'Правильно' : 'Неправильно'),
+        h('p', { style: 'margin:0' }, text(v.explanation)),
+        trans ? h('p', { class: 'tma-hint', style: 'margin:0' }, text(v.explanation, trans)) : '',
+        h('p', { class: 'tma-footnote', style: 'margin:0' }, `Джерело: ${v.source}`)));
+      tma.mainButton({ text: i < questions.length - 1 ? 'Далі' : 'Завершити тему', onClick: () => { i++; draw(); window.scrollTo(0, 0); } });
+    }
+
+    for (const b of buttons) {
+      b.onclick = () => {
+        const id = b.dataset.id ?? '';
+        if (q.type === 'single') { picked.add(id); b.classList.add('is-picked'); void check(); return; }
+        if (picked.has(id)) picked.delete(id); else picked.add(id);
+        b.setAttribute('aria-pressed', String(picked.has(id)));
+        b.classList.toggle('is-picked', picked.has(id));
+        tma.haptic.select();
+        tma.mainButton(picked.size ? { text: 'Перевірити', onClick: () => void check() } : null);
+      };
+    }
+  }
+  draw();
 }
 
 function openStudy(): void {
@@ -511,6 +629,8 @@ function progressScreen(): Kid[] {
   const st = me.premium;
   return [
     head,
+    profileCard(),
+    planSection(),
     h('section', { class: 'tma-card' },
       h('p', { class: 'tma-headline', style: 'margin:0' }, `Вивчено ${mastered} з ${total}`),
       h('div', { class: 'tma-progress', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': String(total), 'aria-valuenow': String(mastered) },
@@ -536,6 +656,77 @@ function progressScreen(): Kid[] {
   ];
 }
 
+/* ---------------------------------------------------------------- profile */
+type TgUser = { first_name?: string; last_name?: string; username?: string; photo_url?: string; is_premium?: boolean };
+const tgUser = (): TgUser => ((tma.tg as unknown as { initDataUnsafe?: { user?: TgUser } } | null)?.initDataUnsafe?.user ?? {});
+
+function daysUntil(iso: string | null): number | null {
+  if (!iso) return null;
+  const ms = new Date(`${iso}T00:00:00`).getTime() - new Date(new Date().toDateString()).getTime();
+  return Number.isFinite(ms) ? Math.round(ms / 86400000) : null;
+}
+
+function profileCard(): HTMLElement {
+  const u = tgUser();
+  const p = me.profile;
+  const name = [u.first_name ?? p?.first_name, u.last_name].filter(Boolean).join(' ') || 'Учень';
+  const initials = name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+  // photo_url comes from Telegram with the launch data; only shown, never stored
+  const avatar = u.photo_url
+    ? h('img', { class: 'profile-avatar', src: u.photo_url, alt: '', referrerpolicy: 'no-referrer' })
+    : h('span', { class: 'profile-avatar is-initials', 'aria-hidden': 'true' }, initials);
+  const days = daysUntil(p?.exam_date ?? null);
+  const since = p?.member_since ? new Date(p.member_since * 1000).toLocaleDateString('uk', { month: 'long', year: 'numeric' }) : '';
+  const chips: Kid[] = [h('span', { class: 'tma-chip' }, `Категорія ${p?.licence_class ?? 'B'}`)];
+  if (days != null && days >= 0) chips.push(h('span', { class: 'tma-chip' }, days === 0 ? 'Іспит сьогодні' : `До іспиту ${days} ${plural(days, 'день', 'дні', 'днів')}`));
+  if (me.premium?.paywall && me.premium.active) chips.push(h('span', { class: 'tma-chip is-success' }, 'Преміум'));
+  return h('section', { class: 'tma-card profile-card' },
+    h('div', { class: 'profile-head' }, avatar,
+      h('div', {}, h('p', { class: 'tma-title3', style: 'margin:0' }, name),
+        h('p', { class: 'tma-hint', style: 'margin:0' }, [u.username ? `@${u.username}` : '', since ? `з нами з ${since}` : ''].filter(Boolean).join(' · ')))),
+    h('div', { style: 'display:flex;flex-wrap:wrap;gap:var(--tma-s2)' }, ...chips));
+}
+
+async function saveProfile(fields: Partial<Profile>): Promise<void> {
+  try {
+    await api('/api/profile', { method: 'POST', body: fields });
+    me.profile = { ...(me.profile as Profile), ...fields };
+    tma.haptic.select();
+    theoryIndex = null;
+    renderRoot();
+  } catch {
+    toast('Не вдалося зберегти. Спробуйте ще раз.');
+  }
+}
+
+function planSection(): HTMLElement {
+  const p = me.profile;
+  const classes = theoryIndex?.classes ?? { B: { uk: 'Легковий (B)' }, AM146: { uk: 'Мопед (AM146)' }, A1: { uk: 'A1' }, A2: { uk: 'A2' }, A: { uk: 'A' } };
+  const classChips = h('div', { class: 'tma-scroll-x', role: 'group', 'aria-label': 'Категорія прав' },
+    ...Object.keys(classes).map((c) => h('button', { class: 'tma-chip', type: 'button', 'aria-pressed': String(p?.licence_class === c),
+      onclick: on(() => { if (p?.licence_class !== c) void saveProfile({ licence_class: c }); }) }, c)));
+  const date = h('input', { class: 'tma-input', type: 'date', value: p?.exam_date ?? '', 'aria-label': 'Дата іспиту' }) as HTMLInputElement;
+  date.onchange = () => void saveProfile({ exam_date: date.value || null });
+  const goals = h('div', { class: 'tma-segmented', role: 'tablist', 'aria-label': 'Денна мета' },
+    ...[10, 20, 30, 50].map((g) => h('button', { type: 'button', role: 'tab', 'aria-selected': String(p?.daily_goal === g),
+      onclick: on(() => { if (p?.daily_goal !== g) void saveProfile({ daily_goal: g }); }) }, `${g}`)));
+  const remind = h('input', { type: 'checkbox', class: 'tma-switch', 'aria-label': 'Нагадування', ...(p?.reminders ? { checked: true } : {}) }) as HTMLInputElement;
+  remind.onchange = () => void saveProfile({ reminders: remind.checked });
+  const today = me.today ?? 0;
+  const goal = p?.daily_goal ?? 10;
+  return h('section', { class: 'tma-section', 'aria-labelledby': 'plan-h', style: 'margin-top:var(--tma-gap-section)' },
+    h('h2', { class: 'tma-section__header', id: 'plan-h' }, 'Мій план'),
+    h('div', { class: 'tma-card' },
+      h('p', { class: 'tma-headline', style: 'margin:0' }, `Сьогодні ${Math.min(today, goal)} з ${goal} відповідей`),
+      h('div', { class: 'tma-progress', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': String(goal), 'aria-valuenow': String(Math.min(today, goal)) },
+        h('i', { style: `width:${Math.min(100, Math.round((today / goal) * 100))}%` })),
+      h('p', { class: 'tma-footnote', style: 'margin:var(--tma-s2) 0 0' }, 'Категорія прав'), classChips,
+      h('p', { class: 'tma-footnote', style: 'margin:var(--tma-s2) 0 0' }, 'Дата іспиту'), date,
+      h('p', { class: 'tma-footnote', style: 'margin:var(--tma-s2) 0 0' }, 'Денна мета, відповідей'), goals,
+      h('label', { class: 'profile-toggle' }, h('span', {}, 'Нагадування в боті'), remind),
+      p?.timezone ? h('p', { class: 'tma-footnote', style: 'margin:0' }, `Часовий пояс: ${p.timezone}`) : ''));
+}
+
 /* ---------------------------------------------------------------- start */
 async function main(): Promise<void> {
   tma.chrome({ header: 'secondary_bg_color', background: 'secondary_bg_color', bottomBar: 'secondary_bg_color' });
@@ -556,6 +747,9 @@ async function main(): Promise<void> {
     tma.ready();
     return;
   }
+  // Time zone for reminders at a sane hour: taken from the device once, shown in the plan.
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if (me.registered && me.profile && !me.profile.timezone && zone) void saveProfile({ timezone: zone });
   setTab(start?.route === 'tab' ? (start.match[1] as Tab) : 'signs');
   if (start?.route === 'sign') { const s = byId.get(start.match[1]); if (s) openSign(s); }
   tma.ready();
