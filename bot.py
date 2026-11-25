@@ -22,6 +22,7 @@ from aiogram.types import (
     InputRichBlockParagraph,
     InputRichBlockSectionHeading,
     InputRichBlockTable,
+    InputMediaPhoto,
     InputRichMessage,
     MenuButtonWebApp,
     RichBlockTableCell,
@@ -31,6 +32,7 @@ from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
 
 import learning
 import premium
+import theory
 from database import Database
 from keyboards import (
     BTN_STUDY, BTN_STATS, BTN_CATEGORIES, BTN_SETTINGS,
@@ -46,6 +48,10 @@ from keyboards import (
     get_details_keyboard,
     get_early_review_keyboard,
     get_reset_confirm_keyboard,
+    get_home_keyboard,
+    get_theory_keyboard,
+    get_mydata_keyboard,
+    get_delete_confirm_keyboard,
 )
 from utils import (
     load_signs_main,
@@ -91,6 +97,7 @@ BOT_COMMANDS = [
     BotCommand(command="stats", description="Переглянути статистику"),
     BotCommand(command="categories", description="Обрати категорії"),
     BotCommand(command="settings", description="Змінити налаштування"),
+    BotCommand(command="theory", description="Теорія і тести"),
     BotCommand(command="premium", description="Преміум-підписка"),
     BotCommand(command="reset", description="Скинути прогрес"),
     BotCommand(command="paysupport", description="Допомога з оплатою"),
@@ -105,6 +112,18 @@ TRANSLATION_LANGUAGE_NAMES = {
     "none": "Без перекладу",
 }
 THEME_NAMES = {"light": "Світла", "dark": "Темна"}
+WEBAPP_URL = os.getenv("WEBAPP_URL") or None
+# /start payloads we record as the user's origin (references/user-profile.md §1)
+ACQUISITION_PREFIXES = ("ref_", "ad_", "ch_", "post_", "qr_", "promo_", "school_")
+# file_id of an already uploaded card: (sign_id, theme) -> file_id, so the next card is an edit
+PHOTO_CACHE: dict[tuple[str, str], str] = {}
+BOT_DESCRIPTION = (
+    "Підготовка до теоретичного іспиту в Норвегії (teoriprøven): дорожні знаки, "
+    "теорія за темами, ситуації на дорозі й тести з таймером. Категорії B, AM146, A1, A2, A. "
+    "Назви — норвезькою або англійською, пояснення — українською чи російською."
+)
+BOT_SHORT_DESCRIPTION = "Знаки, теорія і тести до teoriprøven — з поясненнями українською."
+THEORY_TOPICS, THEORY_QUESTIONS = theory.load()
 
 
 # FSM States (тільки онбординг — навчання stateless, переживає рестарти)
@@ -161,8 +180,19 @@ def intro_card_text(sign_id: str, study_lang: str, trans_lang: str) -> str:
     return text
 
 
-async def send_sign_photo(message: Message, sign_id: str, theme: str, caption: str, kb):
-    """Надсилає знак з обробленим зображенням; за збою — текстом."""
+async def send_sign_photo(message: Message, sign_id: str, theme: str, caption: str, kb,
+                          edit: bool = False):
+    """Надсилає знак з обробленим зображенням; за збою — текстом.
+
+    edit=True і повідомлення з фото: та сама картка оновлюється на місці
+    (editMessageMedia), тож сесія навчання — одне повідомлення, а не стрічка фото."""
+    if edit and message.photo and html_visible_length(caption) <= CAPTION_LIMIT:
+        if await edit_sign_photo(message, sign_id, theme, caption, kb):
+            return
+        try:
+            await message.edit_reply_markup(reply_markup=None)
+        except TelegramBadRequest:
+            pass
     image_path = find_sign_image(sign_id)
     if image_path:
         try:
@@ -172,12 +202,13 @@ async def send_sign_photo(message: Message, sign_id: str, theme: str, caption: s
             else:
                 photo = FSInputFile(image_path)
             if html_visible_length(caption) <= CAPTION_LIMIT:
-                await message.answer_photo(
-                    photo=photo,
+                sent = await message.answer_photo(
+                    photo=PHOTO_CACHE.get((sign_id, theme), photo),
                     caption=caption,
                     parse_mode=ParseMode.HTML,
                     reply_markup=kb,
                 )
+                remember_photo(sent, sign_id, theme)
             else:
                 logger.info("Підпис для знаку %s завеликий; надсилаємо окремим текстом", sign_id)
                 await message.answer_photo(photo=photo)
@@ -188,7 +219,35 @@ async def send_sign_photo(message: Message, sign_id: str, theme: str, caption: s
     await message.answer(caption, parse_mode=ParseMode.HTML, reply_markup=kb)
 
 
-async def send_quiz(message: Message, user, sign_id: str):
+def remember_photo(sent, sign_id: str, theme: str) -> None:
+    if isinstance(sent, Message) and sent.photo:
+        PHOTO_CACHE[(sign_id, theme)] = sent.photo[-1].file_id
+
+
+async def edit_sign_photo(message: Message, sign_id: str, theme: str, caption: str, kb) -> bool:
+    """Замінює фото й підпис у наявній картці. False — не вдалося (тоді надсилаємо нову)."""
+    cached = PHOTO_CACHE.get((sign_id, theme))
+    if cached:
+        media = cached
+    else:
+        image_path = find_sign_image(sign_id)
+        processed = process_sign_image(image_path, theme=theme) if image_path else None
+        if not processed:
+            return False
+        media = BufferedInputFile(processed.read(), filename=f"{sign_id}.jpg")
+    try:
+        edited = await message.edit_media(
+            media=InputMediaPhoto(media=media, caption=caption, parse_mode=ParseMode.HTML),
+            reply_markup=kb,
+        )
+    except TelegramAPIError as exc:
+        logger.info("Картку %s не оновлено на місці: %s", sign_id, exc)
+        return False
+    remember_photo(edited, sign_id, theme)
+    return True
+
+
+async def send_quiz(message: Message, user, sign_id: str, edit: bool = False):
     """Квіз: зображення знаку без назви + 4 варіанти відповіді."""
     study_lang = user["study_language"]
     options = learning.build_quiz_options(sign_id, signs_main, VALID_SIGNS, study_lang)
@@ -199,10 +258,10 @@ async def send_quiz(message: Message, user, sign_id: str):
     if box > 0:
         caption += f"\n\n🔁 Повторення • рівень {box}/{learning.MAX_BOX}"
     kb = get_quiz_keyboard(sign_id, options, signs_main, study_lang)
-    await send_sign_photo(message, sign_id, user["theme"] or 'light', caption, kb)
+    await send_sign_photo(message, sign_id, user["theme"] or 'light', caption, kb, edit=edit)
 
 
-async def send_intro(message: Message, user, sign_id: str):
+async def send_intro(message: Message, user, sign_id: str, edit: bool = False):
     """Знайомство з новим знаком + постановка в чергу повторень."""
     now = int(time.time())
     box, next_review = learning.schedule_after_intro(now)
@@ -210,11 +269,11 @@ async def send_intro(message: Message, user, sign_id: str):
 
     caption = intro_card_text(sign_id, user["study_language"], user["translation_language"])
     await send_sign_photo(
-        message, sign_id, user["theme"] or 'light', caption, get_intro_keyboard(sign_id)
+        message, sign_id, user["theme"] or 'light', caption, get_intro_keyboard(sign_id), edit=edit
     )
 
 
-async def send_study_step(message: Message, user_id: int):
+async def send_study_step(message: Message, user_id: int, edit: bool = False):
     """Головний цикл навчання: повторення -> нові знаки -> «все повторено»."""
     user = db.get_user(user_id)
     if user is None:
@@ -235,10 +294,15 @@ async def send_study_step(message: Message, user_id: int):
     sign_id, mode = learning.pick_next(pool, progress_map)
 
     if mode == "review":
-        await send_quiz(message, user, sign_id)
+        await send_quiz(message, user, sign_id, edit=edit)
     elif mode == "new":
-        await send_intro(message, user, sign_id)
+        await send_intro(message, user, sign_id, edit=edit)
     else:
+        if edit:
+            try:
+                await message.edit_reply_markup(reply_markup=None)
+            except TelegramBadRequest:
+                pass
         # Все повторено, нових знаків немає — кажемо, коли повертатись
         nearest = learning.earliest_due(pool, progress_map)
         in_queue = sum(1 for s in pool if s in progress_map)
@@ -440,11 +504,14 @@ async def cmd_start(message: Message, state: FSMContext):
     user = db.get_user(user_id)
 
     if user is None:
-        await state.set_data({"source": "onboarding"})
+        payload = (message.text or "").split(maxsplit=1)[1:] or [""]
+        acq = payload[0][:64] if payload[0].startswith(ACQUISITION_PREFIXES) else ""
+        await state.set_data({"source": "onboarding", "acq": acq})
         await message.answer(
-            "👋 <b>Вивчайте норвезькі дорожні знаки</b>\n\n"
-            "Бот показує картки, перевіряє знання та повторює знаки через зростаючі інтервали.\n\n"
-            "<b>Оберіть мову назв і квізів:</b>",
+            "👋 <b>Підготовка до теоретичного іспиту в Норвегії</b>\n\n"
+            "Знаки, правила й ситуації на дорозі, тести як на teoriprøven. "
+            "Бот повертає те, що ви забуваєте, саме тоді, коли треба повторити.\n\n"
+            "<b>Оберіть мову назв і питань:</b>",
             parse_mode=ParseMode.HTML,
             reply_markup=get_language_keyboard()
         )
@@ -452,23 +519,53 @@ async def cmd_start(message: Message, state: FSMContext):
     else:
         await state.clear()
         db.touch_user(user_id)
-        progress_map = db.get_progress_map(user_id)
-        valid_set = set(VALID_SIGNS)
-        mastered = sum(
-            1 for s, p in progress_map.items()
-            if s in valid_set and p["box"] >= learning.MASTERED_BOX
-        )
-        now = int(time.time())
-        due = sum(
-            1 for s, p in progress_map.items()
-            if s in valid_set and p["next_review_at"] <= now
-        )
-        text = (
-            f"👋 З поверненням, {message.from_user.first_name or 'друже'}!\n\n"
-            f"Вивчено: {mastered}/{len(VALID_SIGNS)}\n"
-            f"До повторення: {due}"
-        )
-        await message.answer(text, reply_markup=get_main_menu_keyboard())
+        text, kb = home_screen(user, message.from_user.first_name)
+        await message.answer(text, parse_mode=ParseMode.HTML, reply_markup=kb)
+
+
+def home_screen(user, first_name: str | None):
+    """Головний екран: де ви зараз і одна дія вперед."""
+    user_id = user["user_id"]
+    progress_map = db.get_progress_map(user_id)
+    valid_set = set(VALID_SIGNS)
+    now = int(time.time())
+    mastered = sum(1 for s, p in progress_map.items() if s in valid_set and p["box"] >= learning.MASTERED_BOX)
+    due = sum(1 for s, p in progress_map.items() if s in valid_set and p["next_review_at"] <= now)
+    streak = learning.count_streak(db.get_active_days(user_id))
+    licence = user["licence_class"] if "licence_class" in user.keys() else "B"
+    lines = [
+        f"👋 <b>{h(first_name or 'Вітаємо')}</b> · категорія {h(licence)}",
+        "",
+        f"<code>{h(learning.progress_bar(mastered, len(VALID_SIGNS)))}</code> знаки: {mastered} з {len(VALID_SIGNS)}",
+        f"До повторення: {due}" + (f" · серія {h(days_text(streak))}" if streak else ""),
+    ]
+    exam_date = user["exam_date"] if "exam_date" in user.keys() else None
+    if exam_date:
+        try:
+            left = (date.fromisoformat(exam_date) - date.today()).days
+            if left >= 0:
+                lines.append(f"До іспиту: {h(days_text(left))}")
+        except ValueError:
+            pass
+    lines += ["", "Теорія за темами, ситуації й тести — у розділі «Теорія і тести»."]
+    return "\n".join(lines), get_home_keyboard(due, WEBAPP_URL)
+
+
+def theory_screen_text(licence: str) -> str:
+    counts: dict[str, int] = {}
+    for q in theory.for_class(THEORY_QUESTIONS, licence):
+        counts[q["topic"]] = counts.get(q["topic"], 0) + 1
+    rows = []
+    for t in sorted(THEORY_TOPICS["topics"], key=lambda t: t["order"]):
+        if t.get("classes") and licence not in t["classes"]:
+            continue
+        if t["kind"] == "signs":
+            rows.append(f"• {h(t['names']['uk'])} — {len(VALID_SIGNS)} знаків")
+        elif counts.get(t["id"]):
+            rows.append(f"• {h(t['names']['uk'])} — {counts[t['id']]} питань")
+    tail = ("Відкрийте застосунок: практика за темами, ситуації на схемах і тест із таймером."
+            if WEBAPP_URL else "Практика за темами й тести з'являться в застосунку «Знаки».")
+    return (f"📚 <b>Теорія і тести</b> · категорія {h(licence)}\n\n" + "\n".join(rows) + f"\n\n{tail}")
 
 
 @dp.callback_query(F.data.in_(["lang_no", "lang_en"]), StateFilter(OnboardingStates.choose_study_language))
@@ -520,6 +617,9 @@ async def choose_translation_language(callback: CallbackQuery, state: FSMContext
 
     user_id = callback.from_user.id
     db.upsert_user(user_id, study_lang, trans_lang)
+    sync_identity(callback.from_user)
+    if data.get("acq"):
+        db.set_acquisition(user_id, data["acq"].split("_", 1)[0], data["acq"])
 
     study_lang_names = {"no": "норвезькою", "en": "англійською"}
     trans_lang_names = {"no": "норвезьку", "en": "англійську", "ru": "російську",
@@ -564,6 +664,10 @@ async def cmd_learn(message: Message, state: FSMContext):
 @dp.callback_query(F.data == "study_next")
 async def study_next_handler(callback: CallbackQuery):
     await callback.answer()
+    if callback.message.photo:
+        # картка знака → наступна картка в тому ж повідомленні
+        await send_study_step(callback.message, callback.from_user.id, edit=True)
+        return
     try:
         await callback.message.edit_reply_markup(reply_markup=None)
     except TelegramBadRequest:
@@ -675,12 +779,7 @@ async def already_know_handler(callback: CallbackQuery):
     now = int(time.time())
     box, next_review = learning.schedule_known(now)
     db.set_box(user_id, sign_id, box, next_review)
-
-    try:
-        await callback.message.edit_reply_markup(reply_markup=None)
-    except TelegramBadRequest:
-        pass
-    await send_study_step(callback.message, user_id)
+    await send_study_step(callback.message, user_id, edit=bool(callback.message.photo))
 
 
 @dp.callback_query(F.data.startswith("more|"))
@@ -726,7 +825,10 @@ async def more_info_handler(callback: CallbackQuery):
 @dp.message(F.text == BTN_STATS)
 async def cmd_stats(message: Message, state: FSMContext):
     await state.clear()
-    user_id = message.from_user.id
+    await show_stats(message, message.from_user.id)
+
+
+async def show_stats(message: Message, user_id: int):
     user = db.get_user(user_id)
     if not user:
         await message.answer("Спочатку відкрийте /start.")
@@ -798,7 +900,11 @@ async def cmd_stats(message: Message, state: FSMContext):
 @dp.message(F.text == BTN_CATEGORIES)
 async def choose_category_handler(message: Message, state: FSMContext):
     await state.clear()
-    user = db.get_user(message.from_user.id)
+    await show_categories(message, message.from_user.id)
+
+
+async def show_categories(message: Message, user_id: int):
+    user = db.get_user(user_id)
     if not user:
         await message.answer("Спочатку відкрийте /start.")
         return
@@ -999,6 +1105,134 @@ async def cmd_reset(message: Message, state: FSMContext):
     )
 
 
+# ==================== Головна, теорія, мої дані ====================
+
+@dp.callback_query(F.data.in_({"home_open", "home_stats", "home_categories", "home_settings", "home_theory"}))
+async def home_callbacks(callback: CallbackQuery):
+    user = db.get_user(callback.from_user.id)
+    if user is None:
+        await callback.answer("Спочатку відкрийте /start.", show_alert=True)
+        return
+    await callback.answer()
+    if callback.data == "home_open":
+        text, kb = home_screen(user, callback.from_user.first_name)
+        await callback.message.edit_text(text, parse_mode=ParseMode.HTML, reply_markup=kb)
+    elif callback.data == "home_stats":
+        await show_stats(callback.message, user["user_id"])
+    elif callback.data == "home_categories":
+        await show_categories(callback.message, user["user_id"])
+    elif callback.data == "home_settings":
+        await answer_settings_screen(callback.message, user)
+    else:
+        await callback.message.edit_text(theory_screen_text(user["licence_class"]), parse_mode=ParseMode.HTML,
+                                         reply_markup=get_theory_keyboard(WEBAPP_URL))
+
+
+@dp.message(Command("theory"))
+async def cmd_theory(message: Message, state: FSMContext):
+    await state.clear()
+    user = db.get_user(message.from_user.id)
+    if user is None:
+        await message.answer("Спочатку відкрийте /start.")
+        return
+    await message.answer(theory_screen_text(user["licence_class"]), parse_mode=ParseMode.HTML,
+                         reply_markup=get_theory_keyboard(WEBAPP_URL))
+
+
+def mydata_text(user) -> str:
+    """Усе, що бот зберігає про користувача (references/user-profile.md: /mydata)."""
+    uid = user["user_id"]
+    progress = db.get_progress_map(uid)
+    answered, _ = db.get_answer_totals(uid)
+    sub = db.get_subscription(uid)
+    joined = date.fromtimestamp(user["created_at"]).strftime("%d.%m.%Y")
+    rows = [
+        ("Telegram ID", str(uid)),
+        ("Ім'я", user["first_name"] or "—"),
+        ("Username", f"@{user['username']}" if user["username"] else "—"),
+        ("Мова Telegram", user["language_code"] or "—"),
+        ("З нами з", joined),
+        ("Звідки прийшли", user["acq_value"] or "напряму"),
+        ("Мови навчання", f"{user['study_language']} → {user['translation_language']}"),
+        ("Категорія прав", user["licence_class"]),
+        ("Дата іспиту", user["exam_date"] or "—"),
+        ("Денна мета", str(user["daily_goal"])),
+        ("Нагадування", "так" if user["reminders"] else "ні"),
+        ("Часовий пояс", user["timezone"] or "—"),
+        ("Знаків у навчанні", str(len(progress))),
+        ("Відповідей усього", str(answered)),
+        ("Преміум", date.fromtimestamp(sub["expires_at"]).strftime("до %d.%m.%Y") if sub else "ні"),
+    ]
+    body = "\n".join(f"<b>{h(k)}:</b> {h(v)}" for k, v in rows)
+    return ("🧾 <b>Мої дані</b>\n\n" + body +
+            "\n\nМи зберігаємо лише те, що потрібно для навчання й нагадувань. "
+            "Історію імен не ведемо. Видалити все можна кнопкою нижче.")
+
+
+@dp.message(Command("mydata"))
+async def cmd_mydata(message: Message, state: FSMContext):
+    await state.clear()
+    user = db.get_user(message.from_user.id)
+    if user is None:
+        await message.answer("Про вас нічого не збережено.")
+        return
+    await message.answer(mydata_text(user), parse_mode=ParseMode.HTML, reply_markup=get_mydata_keyboard())
+
+
+@dp.message(Command("deletedata"))
+async def cmd_deletedata(message: Message, state: FSMContext):
+    await state.clear()
+    if db.get_user(message.from_user.id) is None:
+        await message.answer("Про вас нічого не збережено.")
+        return
+    await message.answer(delete_prompt_text(), parse_mode=ParseMode.HTML, reply_markup=get_delete_confirm_keyboard())
+
+
+def delete_prompt_text() -> str:
+    return ("<b>Видалити всі ваші дані?</b>\n\n"
+            "Буде видалено профіль, прогрес знаків і теорії, статистику й тести. "
+            "Записи про платежі залишаться для обліку. Скасувати це неможливо.")
+
+
+@dp.callback_query(F.data.in_({"data_show", "data_delete", "data_delete_confirm"}))
+async def data_callbacks(callback: CallbackQuery, state: FSMContext):
+    user = db.get_user(callback.from_user.id)
+    if user is None:
+        await callback.answer("Про вас нічого не збережено.", show_alert=True)
+        return
+    await callback.answer()
+    if callback.data == "data_show":
+        await callback.message.edit_text(mydata_text(user), parse_mode=ParseMode.HTML, reply_markup=get_mydata_keyboard())
+    elif callback.data == "data_delete":
+        await callback.message.edit_text(delete_prompt_text(), parse_mode=ParseMode.HTML,
+                                         reply_markup=get_delete_confirm_keyboard())
+    else:
+        db.delete_user_data(callback.from_user.id)
+        await state.clear()
+        await callback.message.edit_text("✅ <b>Дані видалено</b>\n\nЩоб почати знову, відкрийте /start.",
+                                         parse_mode=ParseMode.HTML)
+
+
+def sync_identity(tg_user) -> None:
+    """Поточні ім'я, username, мова й Premium — лише якщо змінилися (без історії)."""
+    if tg_user is None or tg_user.is_bot:
+        return
+    db.touch_identity(tg_user.id, first_name=tg_user.first_name, last_name=tg_user.last_name,
+                      username=tg_user.username, language_code=tg_user.language_code,
+                      is_premium=bool(tg_user.is_premium))
+
+
+@dp.update.outer_middleware()
+async def profile_middleware(handler, event, data):
+    tg_user = data.get("event_from_user")
+    if tg_user is not None:
+        try:
+            sync_identity(tg_user)
+        except Exception:  # the profile snapshot must never block an update
+            logger.warning("Не вдалося оновити профіль користувача %s", tg_user.id)
+    return await handler(event, data)
+
+
 # ==================== Відхилення від сценарію ====================
 
 @fallback_router.callback_query()
@@ -1088,6 +1322,11 @@ async def main():
     VALID_SIGNS = validate_signs_integrity(signs_list)
 
     await bot.set_my_commands(BOT_COMMANDS)
+    try:
+        await bot.set_my_description(description=BOT_DESCRIPTION)
+        await bot.set_my_short_description(short_description=BOT_SHORT_DESCRIPTION)
+    except TelegramAPIError as exc:
+        logger.warning("Опис бота не оновлено: %s", exc)
 
     runner = await start_mini_app()
     try:

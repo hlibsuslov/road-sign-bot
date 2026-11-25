@@ -1,4 +1,4 @@
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
 
 BTN_STUDY = "🎓 Вчитися"
 BTN_STATS = "📊 Статистика"
@@ -121,7 +121,8 @@ def get_settings_keyboard() -> InlineKeyboardMarkup:
     keyboard = [
         [InlineKeyboardButton(text="🌐 Змінити мови", callback_data="change_language")],
         [InlineKeyboardButton(text="🎨 Змінити тему карток", callback_data="change_theme")],
-        [InlineKeyboardButton(text="⭐ Преміум", callback_data="premium_open")],
+        [InlineKeyboardButton(text="⭐ Преміум", callback_data="premium_open"),
+         InlineKeyboardButton(text="🧾 Мої дані", callback_data="data_show")],
         [InlineKeyboardButton(text="Скинути весь прогрес", callback_data="reset_progress")],
     ]
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
@@ -197,3 +198,41 @@ def get_categories_keyboard(signs_main_data: dict, study_lang: str,
         style="success",
     )])
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+def get_home_keyboard(due: int, webapp_url: str | None = None) -> InlineKeyboardMarkup:
+    """Головний екран: одна дія вперед (primary), розділи — поруч."""
+    study = f"🎓 Вчитися · {due} до повторення" if due else "🎓 Вчитися"
+    rows = [[InlineKeyboardButton(text=study, callback_data="study_next", style="primary")]]
+    if webapp_url:
+        rows.append([InlineKeyboardButton(text="📚 Теорія і тести", web_app=WebAppInfo(url=webapp_url))])
+    else:
+        rows.append([InlineKeyboardButton(text="📚 Теорія і тести", callback_data="home_theory")])
+    rows.append([InlineKeyboardButton(text="📊 Статистика", callback_data="home_stats"),
+                 InlineKeyboardButton(text="📂 Категорії", callback_data="home_categories")])
+    rows.append([InlineKeyboardButton(text="⚙️ Налаштування", callback_data="home_settings"),
+                 InlineKeyboardButton(text="⭐ Преміум", callback_data="premium_open")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def get_theory_keyboard(webapp_url: str | None = None) -> InlineKeyboardMarkup:
+    rows = []
+    if webapp_url:
+        rows.append([InlineKeyboardButton(text="Відкрити застосунок", web_app=WebAppInfo(url=webapp_url), style="primary")])
+    rows.append([InlineKeyboardButton(text="🎓 Вчити знаки", callback_data="study_next")])
+    rows.append([InlineKeyboardButton(text="← Головна", callback_data="home_open")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def get_mydata_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Видалити мої дані", callback_data="data_delete")],
+        [InlineKeyboardButton(text=BTN_BACK, callback_data="settings_back")],
+    ])
+
+
+def get_delete_confirm_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Видалити всі мої дані", callback_data="data_delete_confirm", style="danger")],
+        [InlineKeyboardButton(text="← Залишити дані", callback_data="settings_back")],
+    ])

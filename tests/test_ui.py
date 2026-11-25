@@ -21,7 +21,11 @@ from keyboards import (
     BTN_STATS,
     BTN_STUDY,
     get_categories_keyboard,
+    get_delete_confirm_keyboard,
     get_details_keyboard,
+    get_home_keyboard,
+    get_mydata_keyboard,
+    get_theory_keyboard,
     get_early_review_keyboard,
     get_feedback_keyboard,
     get_intro_keyboard,
@@ -82,7 +86,19 @@ class KeyboardTests(unittest.TestCase):
             get_theme_keyboard("dark"),
             get_reset_confirm_keyboard(),
             get_categories_keyboard(self.signs, "no", "warning", ["100", "200"]),
+            get_home_keyboard(3),
+            get_theory_keyboard(),
+            get_mydata_keyboard(),
+            get_delete_confirm_keyboard(),
         ]
+
+    def test_home_keyboard_opens_the_app_when_configured(self):
+        markup = get_home_keyboard(0, "https://example.test/app")
+        web_apps = [b for b in inline_buttons(markup) if b.web_app]
+        self.assertEqual(len(web_apps), 1)
+        self.assertEqual(web_apps[0].web_app.url, "https://example.test/app")
+        self.assertEqual(markup.inline_keyboard[0][0].callback_data, "study_next")
+        self.assertEqual(markup.inline_keyboard[0][0].style, "primary")
 
     def test_main_menu_is_persistent_and_never_requires_typing(self):
         markup = get_main_menu_keyboard()
@@ -110,7 +126,7 @@ class KeyboardTests(unittest.TestCase):
                 self.assertLessEqual(len(button.callback_data.encode("utf-8")), 64)
                 self.assertIn(button.style, allowed_styles)
                 if button.style == "danger":
-                    self.assertEqual(button.callback_data, "reset_confirm")
+                    self.assertIn(button.callback_data, {"reset_confirm", "data_delete_confirm"})
                 primary_count += button.style == "primary"
                 labels.append(button.text)
             self.assertEqual(len(labels), len(set(labels)), labels)
@@ -290,7 +306,7 @@ class MessageTests(unittest.TestCase):
         self.assertEqual(
             commands,
             {"start", "learn", "stats", "categories", "settings", "reset",
-             "premium", "paysupport"},
+             "premium", "paysupport", "theory"},
         )
 
     def test_every_callback_handler_answers_telegram(self):
@@ -365,6 +381,47 @@ class SignLibraryTests(unittest.TestCase):
         with Image.open(output) as card:
             corner = card.convert("RGB").getpixel((5, 5))
         self.assertTrue(all(c < 80 for c in corner), corner)
+
+
+class HomeAndDataTests(unittest.TestCase):
+    def setUp(self):
+        import tempfile
+        from database import Database
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.db = Database(os.path.join(self.tmp.name, "h.db"))
+        self.db.init_db()
+        self.db.upsert_user(9, "no", "uk")
+        self.db.touch_identity(9, first_name="<b>Ola</b>", last_name=None, username="ola",
+                               language_code="uk", is_premium=False)
+        self.db.update_profile(9, {"exam_date": "2099-01-01", "licence_class": "A1"})
+        self.patches = [patch.object(app, "db", self.db), patch.object(app, "VALID_SIGNS", ["100_1", "302_0"])]
+        for p in self.patches:
+            p.start()
+
+    def tearDown(self):
+        for p in self.patches:
+            p.stop()
+        self.tmp.cleanup()
+
+    def test_home_screen_shows_progress_goal_and_one_forward_action(self):
+        text, kb = app.home_screen(self.db.get_user(9), "<b>Ola</b>")
+        self.assertIn("&lt;b&gt;Ola&lt;/b&gt;", text)     # names are escaped
+        self.assertIn("категорія A1", text)
+        self.assertIn("До іспиту", text)
+        self.assertIn("знаки: 0 з 2", text)
+        self.assertEqual(kb.inline_keyboard[0][0].callback_data, "study_next")
+
+    def test_mydata_lists_the_record_and_delete_removes_it(self):
+        text = app.mydata_text(self.db.get_user(9))
+        self.assertIn("@ola", text)
+        self.assertIn("A1", text)
+        self.assertNotIn("<b>Ola</b>", text)
+        self.db.delete_user_data(9)
+        self.assertIsNone(self.db.get_user(9))
+
+    def test_theory_screen_follows_the_licence_class(self):
+        self.assertIn("Мопед", app.theory_screen_text("AM146"))
+        self.assertNotIn("Мопед", app.theory_screen_text("B"))
 
 
 if __name__ == "__main__":
