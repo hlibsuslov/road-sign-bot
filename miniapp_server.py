@@ -86,10 +86,14 @@ def create_app(*, db, bot_token: str, get_catalog, signs_main: dict, get_valid,
 
     @web.middleware
     async def security_headers(request: web.Request, handler):
-        response = await handler(request)
-        response.headers.setdefault("X-Content-Type-Options", "nosniff")
-        response.headers.setdefault("Referrer-Policy", "no-referrer")
-        return response
+        def harden(response):
+            response.headers.setdefault("X-Content-Type-Options", "nosniff")
+            response.headers.setdefault("Referrer-Policy", "no-referrer")
+            return response
+        try:
+            return harden(await handler(request))
+        except web.HTTPException as exc:  # error responses are raised, not returned
+            raise harden(exc)
 
     app = web.Application(client_max_size=64 * 1024, middlewares=[security_headers])
 
