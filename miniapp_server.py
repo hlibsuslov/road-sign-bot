@@ -49,6 +49,8 @@ INIT_DATA_MAX_AGE = 24 * 3600   # learning data; the invoice itself is checked b
 EXAM_SIZES = (10, 20, 45)       # 45 = the real teoriprøven length
 EXAM_SECONDS_PER_QUESTION = 60
 EXAM_PASS_RATIO = 38 / 45       # teoriprøven klasse B: at most 7 mistakes out of 45
+EXAM_MAX_OPEN, EXAM_OPEN_WINDOW = 3, 3 * 3600   # unfinished tests per user in the window
+INVOICE_INTERVAL = 30           # seconds between invoice links per user (Telegram flood limits)
 
 
 def build_catalog(signs_main: dict, signs_extra: dict, valid: list[str]) -> dict:
@@ -80,7 +82,16 @@ def create_app(*, db, bot_token: str, get_catalog, signs_main: dict, get_valid,
     """get_catalog() and get_valid() return the catalogue and the sign ids with images,
     built after the image check at startup. bot (optional) creates invoice links and
     sends test results to the chat."""
-    app = web.Application(client_max_size=64 * 1024)
+    invoice_at: dict[int, float] = {}
+
+    @web.middleware
+    async def security_headers(request: web.Request, handler):
+        response = await handler(request)
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("Referrer-Policy", "no-referrer")
+        return response
+
+    app = web.Application(client_max_size=64 * 1024, middlewares=[security_headers])
 
     def user_id_from(request: web.Request) -> int:
         header = request.headers.get("Authorization", "")
@@ -249,8 +260,10 @@ def create_app(*, db, bot_token: str, get_catalog, signs_main: dict, get_valid,
         user = registered_user(user_id)
         require_premium(user_id)
         size = (await body(request)).get("size")
-        if size not in EXAM_SIZES or isinstance(size, bool):
+        if type(size) is not int or size not in EXAM_SIZES:
             raise web.HTTPBadRequest(text=f"size must be one of {EXAM_SIZES}")
+        if db.open_exam_count(user_id, int(time.time()) - EXAM_OPEN_WINDOW) >= EXAM_MAX_OPEN:
+            raise json_error(web.HTTPTooManyRequests, "too_many_open_tests")
         valid = get_valid()
         lang = user["study_language"]
         picked = random.sample(valid, min(size, len(valid)))
@@ -310,9 +323,10 @@ def create_app(*, db, bot_token: str, get_catalog, signs_main: dict, get_valid,
             raise json_error(web.HTTPConflict, "already_finished")
         total = len(questions)
         took = int(time.time()) - exam["created_at"]
-        passed = correct >= total * EXAM_PASS_RATIO
+        timed_out = took > total * EXAM_SECONDS_PER_QUESTION + 30
+        passed = correct >= total * EXAM_PASS_RATIO and not timed_out
         result = {"correct": correct, "total": total, "passed": passed,
-                  "timed_out": took > total * EXAM_SECONDS_PER_QUESTION + 30, "items": items}
+                  "timed_out": timed_out, "items": items}
         if bot is not None:
             try:
                 verdict = "складено" if passed else "не складено"
@@ -331,6 +345,10 @@ def create_app(*, db, bot_token: str, get_catalog, signs_main: dict, get_valid,
             raise json_error(web.HTTPConflict, "not_needed")
         if bot is None:
             raise web.HTTPServiceUnavailable(text="payments are not configured")
+        now = time.monotonic()
+        if now - invoice_at.get(user_id, -INVOICE_INTERVAL) < INVOICE_INTERVAL:
+            raise json_error(web.HTTPTooManyRequests, "slow_down")
+        invoice_at[user_id] = now
         return no_store({"link": await premium.invoice_link(bot, user_id)})
 
     app.router.add_get("/", index)

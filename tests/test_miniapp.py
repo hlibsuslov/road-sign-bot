@@ -170,6 +170,16 @@ class MiniAppServerTests(AioHTTPTestCase):
 
         bad = await self.client.post("/api/exam/start", json={"size": 999}, headers=self.auth())
         self.assertEqual(bad.status, 400)
+        floaty = await self.client.post("/api/exam/start", json={"size": 10.0}, headers=self.auth())
+        self.assertEqual(floaty.status, 400)
+
+    async def test_open_tests_are_limited(self):
+        for _ in range(miniapp_server.EXAM_MAX_OPEN):
+            ok = await self.client.post("/api/exam/start", json={"size": 10}, headers=self.auth())
+            self.assertEqual(ok.status, 200)
+        extra = await self.client.post("/api/exam/start", json={"size": 10}, headers=self.auth())
+        self.assertEqual(extra.status, 429)
+        self.assertEqual(extra.headers.get("X-Content-Type-Options"), "nosniff")
 
 
 class PremiumTests(unittest.TestCase):
@@ -214,6 +224,14 @@ class PremiumTests(unittest.TestCase):
         self.assertEqual(renewal, now + 60 * 86400)
         self.assertEqual(self.db.get_subscription(5)["charge_id"], "c2")
         self.assertIsNone(premium.apply_payment(self.db, 5, self.payment("c3", now, payload="premium:9")))
+
+    def test_refund_ends_access_once(self):
+        premium.apply_payment(self.db, 5, self.payment("c1", int(time.time()) + 30 * 86400))
+        self.assertTrue(premium.is_premium(self.db, 5))
+        self.assertTrue(self.db.apply_refund(5, "c1"))
+        self.assertFalse(premium.is_premium(self.db, 5))
+        self.assertFalse(self.db.apply_refund(5, "c1"))
+        self.assertFalse(self.db.apply_refund(6, "c1"))                 # not their charge
 
     def test_access_ends_after_the_grace_window(self):
         now = int(time.time())

@@ -116,17 +116,19 @@ def apply_payment(db, user_id: int, pay) -> int | None:
     if pay.invoice_payload != payload_for(user_id) or pay.currency != "XTR":
         logger.error("Payment with unexpected payload/currency, charge %s", pay.telegram_payment_charge_id)
         return None
-    fresh = db.record_payment(
-        charge_id=pay.telegram_payment_charge_id, user_id=user_id,
-        amount=pay.total_amount, currency=pay.currency, payload=pay.invoice_payload,
-        expires_at=pay.subscription_expiration_date,
-        is_recurring=bool(pay.is_recurring), is_first_recurring=bool(pay.is_first_recurring),
-    )
-    if not fresh:
-        return None
     expires = pay.subscription_expiration_date or int(time.time()) + PERIOD_SECONDS
-    db.upsert_subscription(user_id, pay.telegram_payment_charge_id, expires)
-    return expires
+    try:
+        fresh = db.apply_subscription_payment(
+            charge_id=pay.telegram_payment_charge_id, user_id=user_id,
+            amount=pay.total_amount, currency=pay.currency, payload=pay.invoice_payload,
+            expires_at=expires, is_recurring=bool(pay.is_recurring),
+            is_first_recurring=bool(pay.is_first_recurring),
+        )
+    except Exception:
+        # Polling won't redeliver this update: the charge id is what support needs to restore access.
+        logger.exception("PAYMENT NOT APPLIED: user %s charge %s", user_id, pay.telegram_payment_charge_id)
+        raise
+    return expires if fresh else None
 
 
 def _date(ts: int) -> str:
@@ -235,6 +237,12 @@ def setup(db):
                 "Навчання і тести — у кнопці «Знаки» внизу чату.",
                 parse_mode=ParseMode.HTML,
             )
+
+    @router.message(F.refunded_payment)
+    async def on_refund(message: Message):
+        refund = message.refunded_payment
+        if db.apply_refund(message.from_user.id, refund.telegram_payment_charge_id):
+            await message.answer("Кошти повернено. Преміум вимкнено.")
 
     @router.message(Command("paysupport"))
     async def paysupport(message: Message):

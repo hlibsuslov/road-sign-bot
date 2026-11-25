@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "classes": {
+    "B": {"no": "Personbil (klasse B)", "en": "Car (class B)", "uk": "Легковий автомобіль (категорія B)", "ru": "Легковой автомобиль (категория B)"},
+    "AM146": {"no": "Moped (klasse AM146)", "en": "Moped (class AM146)", "uk": "Мопед (категорія AM146)", "ru": "Мопед (категория AM146)"},
+    "A1": {"no": "Lett motorsykkel (A1)", "en": "Light motorcycle (A1)", "uk": "Легкий мотоцикл (A1)", "ru": "Лёгкий мотоцикл (A1)"},
+    "A2": {"no": "Mellomtung motorsykkel (A2)", "en": "Medium motorcycle (A2)", "uk": "Мотоцикл середньої потужності (A2)", "ru": "Мотоцикл средней мощности (A2)"},
+    "A": {"no": "Tung motorsykkel (A)", "en": "Motorcycle (A)", "uk": "Мотоцикл (A)", "ru": "Мотоцикл (A)"}
+  },
+  "topics": [
+    {"id": "skilt", "icon": "flag", "order": 1, "kind": "signs",
+     "names": {"no": "Trafikkskilt", "en": "Road signs", "uk": "Дорожні знаки", "ru": "Дорожные знаки"},
+     "summary": {"no": "Alle offentlige trafikkskilt etter skiltforskriften.", "en": "All official road signs.", "uk": "Усі офіційні дорожні знаки Норвегії.", "ru": "Все официальные дорожные знаки Норвегии."}},
+    {"id": "vikeplikt", "icon": "swap", "order": 2, "kind": "questions",
+     "names": {"no": "Vikeplikt og kryss", "en": "Right of way and junctions", "uk": "Пріоритет і перехрестя", "ru": "Приоритет и перекрёстки"},
+     "summary": {"no": "Høyreregelen, rundkjøringer, gående og utrykningskjøretøy.", "en": "The right-hand rule, roundabouts, pedestrians, emergency vehicles.", "uk": "Правило правої руки, кільця, пішоходи, спецтранспорт.", "ru": "Правило правой руки, кольца, пешеходы, спецтранспорт."}},
+    {"id": "fart", "icon": "clock", "order": 3, "kind": "questions",
+     "names": {"no": "Fart, avstand og stopplengde", "en": "Speed, distance and stopping", "uk": "Швидкість, дистанція і гальмування", "ru": "Скорость, дистанция и торможение"},
+     "summary": {"no": "Fartsgrenser, reaksjonslengde og bremselengde.", "en": "Speed limits, reaction and braking distance.", "uk": "Обмеження швидкості, шлях реакції та гальмівний шлях.", "ru": "Ограничения скорости, путь реакции и тормозной путь."}},
+    {"id": "parkering", "icon": "location", "order": 4, "kind": "questions",
+     "names": {"no": "Stans og parkering", "en": "Stopping and parking", "uk": "Зупинка і стоянка", "ru": "Остановка и стоянка"},
+     "summary": {"no": "Hvor du ikke får stanse eller parkere.", "en": "Where you may not stop or park.", "uk": "Де не можна зупинятися чи паркуватися.", "ru": "Где нельзя останавливаться и парковаться."}},
+    {"id": "mennesket", "icon": "person", "order": 5, "kind": "questions",
+     "names": {"no": "Mennesket i trafikken", "en": "The human factor", "uk": "Людина за кермом", "ru": "Человек за рулём"},
+     "summary": {"no": "Rus, trøtthet, oppmerksomhet og mobil.", "en": "Alcohol, fatigue, attention, phones.", "uk": "Алкоголь, втома, увага, телефон.", "ru": "Алкоголь, усталость, внимание, телефон."}},
+    {"id": "kjoretoy", "icon": "settings", "order": 6, "kind": "questions",
+     "names": {"no": "Kjøretøyet og sikring", "en": "The vehicle and safety", "uk": "Автомобіль і безпека", "ru": "Автомобиль и безопасность"},
+     "summary": {"no": "Lys, dekk, bilbelte og sikring av barn.", "en": "Lights, tyres, seat belts, children.", "uk": "Світло, шини, паски безпеки, діти.", "ru": "Свет, шины, ремни безопасности, дети."}},
+    {"id": "vinter", "icon": "moon", "order": 7, "kind": "questions",
+     "names": {"no": "Vinterkjøring", "en": "Winter driving", "uk": "Зимова їзда", "ru": "Зимняя езда"},
+     "summary": {"no": "Piggdekk, mønsterdybde og glatt føre.", "en": "Studded tyres, tread depth, slippery roads.", "uk": "Шипи, глибина протектора, слизька дорога.", "ru": "Шипы, глубина протектора, скользкая дорога."}},
+    {"id": "ulykker", "icon": "warning", "order": 8, "kind": "questions",
+     "names": {"no": "Ulykker og førstehjelp", "en": "Accidents and first aid", "uk": "ДТП і перша допомога", "ru": "ДТП и первая помощь"},
+     "summary": {"no": "Sikre ulykkesstedet, varsle og hjelpe.", "en": "Secure the scene, call for help, assist.", "uk": "Убезпечити місце, викликати допомогу, допомогти.", "ru": "Обезопасить место, вызвать помощь, помочь."}},
+    {"id": "tohjul", "icon": "bolt", "order": 9, "kind": "questions", "classes": ["AM146", "A1", "A2", "A"],
+     "names": {"no": "Moped og motorsykkel", "en": "Moped and motorcycle", "uk": "Мопед і мотоцикл", "ru": "Мопед и мотоцикл"},
+     "summary": {"no": "Aldersgrenser, kjøretøyklasser og verneutstyr.", "en": "Age limits, vehicle classes, protective gear.", "uk": "Вікові межі, категорії, захисне спорядження.", "ru": "Возрастные ограничения, категории, защитная экипировка."}}
+  ]
+}

@@ -137,9 +137,13 @@ class Database:
                 expires_at INTEGER,
                 is_recurring INTEGER NOT NULL DEFAULT 0,
                 is_first_recurring INTEGER NOT NULL DEFAULT 0,
-                created_at INTEGER NOT NULL
+                created_at INTEGER NOT NULL,
+                refunded_at INTEGER
             )
         """)
+        payment_cols = {r["name"] for r in cursor.execute("PRAGMA table_info(payments)")}
+        if "refunded_at" not in payment_cols:
+            cursor.execute("ALTER TABLE payments ADD COLUMN refunded_at INTEGER")
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS subscriptions (
                 user_id INTEGER PRIMARY KEY,
@@ -330,6 +334,58 @@ class Database:
                   int(is_recurring), int(is_first_recurring), int(time.time())))
             conn.commit()
             return cur.rowcount == 1
+
+    def apply_subscription_payment(self, *, charge_id: str, user_id: int, amount: int,
+                                   currency: str, payload: str, expires_at: int,
+                                   is_recurring: bool, is_first_recurring: bool) -> bool:
+        """Payment row and subscription period in one transaction. False = already applied."""
+        now = int(time.time())
+        with self.get_connection() as conn:
+            cur = conn.execute("""
+                INSERT OR IGNORE INTO payments
+                    (charge_id, user_id, amount, currency, payload, expires_at,
+                     is_recurring, is_first_recurring, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (charge_id, user_id, amount, currency, payload, expires_at,
+                  int(is_recurring), int(is_first_recurring), now))
+            if cur.rowcount != 1:
+                return False
+            conn.execute("""
+                INSERT INTO subscriptions (user_id, charge_id, expires_at, is_canceled, updated_at)
+                VALUES (?, ?, ?, 0, ?)
+                ON CONFLICT (user_id) DO UPDATE SET
+                    charge_id = excluded.charge_id,
+                    expires_at = MAX(subscriptions.expires_at, excluded.expires_at),
+                    is_canceled = 0,
+                    updated_at = excluded.updated_at
+            """, (user_id, charge_id, expires_at, now))
+            conn.commit()
+            return True
+
+    def apply_refund(self, user_id: int, charge_id: str) -> bool:
+        """A refunded charge ends access now. False = unknown charge or already refunded."""
+        now = int(time.time())
+        with self.get_connection() as conn:
+            cur = conn.execute(
+                "UPDATE payments SET refunded_at = ? WHERE charge_id = ? AND user_id = ? AND refunded_at IS NULL",
+                (now, charge_id, user_id),
+            )
+            if cur.rowcount != 1:
+                return False
+            conn.execute(
+                "UPDATE subscriptions SET expires_at = ?, is_canceled = 1, updated_at = ? "
+                "WHERE user_id = ? AND charge_id = ?",
+                (now - 86400, now, user_id, charge_id),
+            )
+            conn.commit()
+            return True
+
+    def open_exam_count(self, user_id: int, since: int) -> int:
+        with self.get_connection() as conn:
+            return conn.execute(
+                "SELECT COUNT(*) FROM exams WHERE user_id = ? AND finished_at IS NULL AND created_at > ?",
+                (user_id, since),
+            ).fetchone()[0]
 
     def upsert_subscription(self, user_id: int, charge_id: str, expires_at: int):
         """Новий або продовжений період. Термін береться з successful_payment, не рахується."""
