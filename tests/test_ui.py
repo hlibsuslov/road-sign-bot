@@ -289,7 +289,8 @@ class MessageTests(unittest.TestCase):
         commands = {item.command for item in app.BOT_COMMANDS}
         self.assertEqual(
             commands,
-            {"start", "learn", "stats", "categories", "settings", "reset"},
+            {"start", "learn", "stats", "categories", "settings", "reset",
+             "premium", "paysupport"},
         )
 
     def test_every_callback_handler_answers_telegram(self):

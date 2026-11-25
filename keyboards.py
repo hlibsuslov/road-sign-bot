@@ -121,6 +121,7 @@ def get_settings_keyboard() -> InlineKeyboardMarkup:
     keyboard = [
         [InlineKeyboardButton(text="🌐 Змінити мови", callback_data="change_language")],
         [InlineKeyboardButton(text="🎨 Змінити тему карток", callback_data="change_theme")],
+        [InlineKeyboardButton(text="⭐ Преміум", callback_data="premium_open")],
         [InlineKeyboardButton(text="Скинути весь прогрес", callback_data="reset_progress")],
     ]
     return InlineKeyboardMarkup(inline_keyboard=keyboard)

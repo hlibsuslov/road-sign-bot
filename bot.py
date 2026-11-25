@@ -6,7 +6,7 @@ import time
 from datetime import date
 from html import escape as escape_html, unescape as unescape_html
 
-from aiogram import Bot, Dispatcher, F
+from aiogram import Bot, Dispatcher, F, Router
 from aiogram.enums import ParseMode
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
@@ -30,6 +30,7 @@ from aiogram.types import (
 from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
 
 import learning
+import premium
 from database import Database
 from keyboards import (
     BTN_STUDY, BTN_STATS, BTN_CATEGORIES, BTN_SETTINGS,
@@ -70,6 +71,8 @@ bot = Bot(token=BOT_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 db = Database(db_path=os.getenv("DB_PATH", "road_signs_bot.db"))
+# Обробники «все інше» йдуть останніми, після оплати (successful_payment — теж повідомлення).
+fallback_router = Router(name="fallback")
 
 # Завантаження даних
 signs_main = load_signs_main()
@@ -88,7 +91,9 @@ BOT_COMMANDS = [
     BotCommand(command="stats", description="Переглянути статистику"),
     BotCommand(command="categories", description="Обрати категорії"),
     BotCommand(command="settings", description="Змінити налаштування"),
+    BotCommand(command="premium", description="Преміум-підписка"),
     BotCommand(command="reset", description="Скинути прогрес"),
+    BotCommand(command="paysupport", description="Допомога з оплатою"),
 ]
 
 STUDY_LANGUAGE_NAMES = {"no": "Норвезька", "en": "Англійська"}
@@ -996,7 +1001,7 @@ async def cmd_reset(message: Message, state: FSMContext):
 
 # ==================== Відхилення від сценарію ====================
 
-@dp.callback_query()
+@fallback_router.callback_query()
 async def unknown_callback_handler(callback: CallbackQuery):
     """Завершує спіннер для застарілих кнопок зі старих повідомлень."""
     await callback.answer(
@@ -1005,7 +1010,7 @@ async def unknown_callback_handler(callback: CallbackQuery):
     )
 
 
-@dp.message(StateFilter(OnboardingStates.choose_study_language))
+@fallback_router.message(StateFilter(OnboardingStates.choose_study_language))
 async def study_language_prompt(message: Message, state: FSMContext):
     data = await state.get_data()
     await message.answer(
@@ -1017,7 +1022,7 @@ async def study_language_prompt(message: Message, state: FSMContext):
     )
 
 
-@dp.message(StateFilter(OnboardingStates.choose_translation_language))
+@fallback_router.message(StateFilter(OnboardingStates.choose_translation_language))
 async def translation_language_prompt(message: Message, state: FSMContext):
     data = await state.get_data()
     await message.answer(
@@ -1026,7 +1031,7 @@ async def translation_language_prompt(message: Message, state: FSMContext):
     )
 
 
-@dp.message(StateFilter(None))
+@fallback_router.message(StateFilter(None))
 async def unknown_message_handler(message: Message):
     if db.get_user(message.from_user.id) is None:
         await message.answer("Відкрийте /start, щоб налаштувати бота.")
@@ -1069,6 +1074,11 @@ async def on_error(event: ErrorEvent):
 
 # ==================== Запуск бота ====================
 
+premium.setup(db)
+dp.include_router(premium.router)
+dp.include_router(fallback_router)
+
+
 async def main():
     global VALID_SIGNS
     logger.info("Бот запускається...")
@@ -1098,7 +1108,10 @@ async def start_mini_app():
         import miniapp_server
 
         catalog = miniapp_server.build_catalog(signs_main, signs_extra, VALID_SIGNS)
-        app = miniapp_server.create_app(db=db, bot_token=BOT_TOKEN, get_catalog=lambda: catalog)
+        app = miniapp_server.create_app(
+            db=db, bot_token=BOT_TOKEN, get_catalog=lambda: catalog,
+            signs_main=signs_main, get_valid=lambda: VALID_SIGNS, bot=bot,
+        )
         runner = await miniapp_server.start(app, int(port))
     if url:
         await bot.set_chat_menu_button(menu_button=MenuButtonWebApp(

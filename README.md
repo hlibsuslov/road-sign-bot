@@ -130,6 +130,19 @@ UI-kit без залежностей; `miniapp_server.py` — HTTP API у про
 |---|---|
 | `WEBAPP_PORT` | запускає сервер Mini App на цьому порту (без неї Mini App вимкнено) |
 | `WEBAPP_URL` | публічна HTTPS-адреса; бот ставить кнопку меню «Знаки» |
+| `PAYWALL_ENABLED` | `1` вмикає платний доступ; без неї все безкоштовно (безпечний деплой) |
+| `PREMIUM_STARS` | ціна підписки в Stars за 30 днів (типово `50`) |
+| `SUPPORT_CONTACT` | контакт для `/paysupport` (наприклад, `@username`) |
+
+Розділи Mini App: «Знаки» (бібліотека, вільний доступ), «Навчання» (той самий цикл
+Лейтнера, що й у чаті), «Тест» (10/20/45 питань, таймер, прохідний бал як на
+teoriprøven — 38 з 45, розбір помилок, результат надходить у чат), «Прогрес».
+«Навчання» і «Тест» — для Преміуму, коли `PAYWALL_ENABLED=1`.
+
+Оплата: підписка Telegram Stars (`createInvoiceLink` з `subscription_period`),
+`pre_checkout_query` перевіряє payload, валюту й суму на сервері, кожен платіж
+зберігається один раз за `telegram_payment_charge_id`, термін доступу — з
+`subscription_expiration_date`. Скасувати/відновити продовження — `/premium`.
 
 ```bash
 node webapp/build.mjs        # TypeScript -> webapp/dist (Node >= 22.18, без пакетів)

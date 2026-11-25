@@ -6,7 +6,7 @@ from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 class Database:
@@ -18,6 +18,10 @@ class Database:
       sign_progress — стан кожного знаку в системі інтервальних повторень
                       (box Лейтнера, лічильники відповідей, розклад повторень)
       daily_stats   — агрегована денна статистика відповідей (для серій та точності)
+    v3:
+      payments      — кожен платіж Stars один раз (ключ — telegram_payment_charge_id)
+      subscriptions — поточна підписка користувача (термін — з successful_payment)
+      exams         — тести в Mini App: питання, відповіді, результат
     """
 
     def __init__(self, db_path: str = "road_signs_bot.db"):
@@ -121,6 +125,43 @@ class Database:
                 """, (r["user_id"], r["sign_id"], now, now, now + 7 * 86400))
             cursor.execute("DROP TABLE learned_signs")
             logger.info("Перенесено %s записів зі старої таблиці learned_signs", len(rows))
+
+        # v3: оплата Stars і тести
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS payments (
+                charge_id TEXT PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                amount INTEGER NOT NULL,
+                currency TEXT NOT NULL,
+                payload TEXT NOT NULL,
+                expires_at INTEGER,
+                is_recurring INTEGER NOT NULL DEFAULT 0,
+                is_first_recurring INTEGER NOT NULL DEFAULT 0,
+                created_at INTEGER NOT NULL
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS subscriptions (
+                user_id INTEGER PRIMARY KEY,
+                charge_id TEXT NOT NULL,
+                expires_at INTEGER NOT NULL,
+                is_canceled INTEGER NOT NULL DEFAULT 0,
+                updated_at INTEGER NOT NULL
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS exams (
+                id TEXT PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                questions TEXT NOT NULL,
+                answers TEXT,
+                correct INTEGER,
+                total INTEGER NOT NULL,
+                created_at INTEGER NOT NULL,
+                finished_at INTEGER
+            )
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_exams_user ON exams (user_id, created_at)")
 
     # ==================== Користувачі ====================
 
@@ -272,3 +313,80 @@ class Database:
                 (user_id, day),
             ).fetchone()
             return (row["answered"], row["correct"]) if row else (0, 0)
+
+    # ==================== Оплата (Stars) ====================
+
+    def record_payment(self, *, charge_id: str, user_id: int, amount: int, currency: str,
+                       payload: str, expires_at: Optional[int], is_recurring: bool,
+                       is_first_recurring: bool) -> bool:
+        """Зберігає платіж. False — цей charge_id уже оброблено (повторна доставка)."""
+        with self.get_connection() as conn:
+            cur = conn.execute("""
+                INSERT OR IGNORE INTO payments
+                    (charge_id, user_id, amount, currency, payload, expires_at,
+                     is_recurring, is_first_recurring, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (charge_id, user_id, amount, currency, payload, expires_at,
+                  int(is_recurring), int(is_first_recurring), int(time.time())))
+            conn.commit()
+            return cur.rowcount == 1
+
+    def upsert_subscription(self, user_id: int, charge_id: str, expires_at: int):
+        """Новий або продовжений період. Термін береться з successful_payment, не рахується."""
+        with self.get_connection() as conn:
+            conn.execute("""
+                INSERT INTO subscriptions (user_id, charge_id, expires_at, is_canceled, updated_at)
+                VALUES (?, ?, ?, 0, ?)
+                ON CONFLICT (user_id) DO UPDATE SET
+                    charge_id = excluded.charge_id,
+                    expires_at = MAX(subscriptions.expires_at, excluded.expires_at),
+                    is_canceled = 0,
+                    updated_at = excluded.updated_at
+            """, (user_id, charge_id, expires_at, int(time.time())))
+            conn.commit()
+
+    def get_subscription(self, user_id: int) -> Optional[sqlite3.Row]:
+        with self.get_connection() as conn:
+            return conn.execute(
+                "SELECT * FROM subscriptions WHERE user_id = ?", (user_id,)
+            ).fetchone()
+
+    def set_subscription_canceled(self, user_id: int, canceled: bool):
+        with self.get_connection() as conn:
+            conn.execute(
+                "UPDATE subscriptions SET is_canceled = ?, updated_at = ? WHERE user_id = ?",
+                (int(canceled), int(time.time()), user_id),
+            )
+            conn.commit()
+
+    # ==================== Тести (Mini App) ====================
+
+    def create_exam(self, exam_id: str, user_id: int, questions: str, total: int):
+        with self.get_connection() as conn:
+            conn.execute(
+                "INSERT INTO exams (id, user_id, questions, total, created_at) VALUES (?, ?, ?, ?, ?)",
+                (exam_id, user_id, questions, total, int(time.time())),
+            )
+            conn.commit()
+
+    def get_exam(self, exam_id: str) -> Optional[sqlite3.Row]:
+        with self.get_connection() as conn:
+            return conn.execute("SELECT * FROM exams WHERE id = ?", (exam_id,)).fetchone()
+
+    def finish_exam(self, exam_id: str, answers: str, correct: int) -> bool:
+        """Фіксує результат один раз. False — тест уже завершено."""
+        with self.get_connection() as conn:
+            cur = conn.execute("""
+                UPDATE exams SET answers = ?, correct = ?, finished_at = ?
+                WHERE id = ? AND finished_at IS NULL
+            """, (answers, correct, int(time.time()), exam_id))
+            conn.commit()
+            return cur.rowcount == 1
+
+    def recent_exams(self, user_id: int, limit: int = 5) -> List[sqlite3.Row]:
+        with self.get_connection() as conn:
+            return conn.execute("""
+                SELECT id, correct, total, created_at, finished_at FROM exams
+                WHERE user_id = ? AND finished_at IS NOT NULL
+                ORDER BY finished_at DESC LIMIT ?
+            """, (user_id, limit)).fetchall()

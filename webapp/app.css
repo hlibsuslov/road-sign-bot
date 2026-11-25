@@ -1,14 +1,16 @@
 /* Only what the kit doesn't cover: the sign artwork sits on the theme surface, uncropped. */
+/* Every sign sits in the same square; --d (from the server, utils.sign_scale) sizes its
+   longer side so triangles, circles, plates and posts look equally heavy. */
 .sign-art {
   display: grid;
   place-items: center;
   aspect-ratio: 1 / 1;
-  padding: 12%;
   border-radius: var(--tma-r-inner);
   background: var(--tma-surface);
+  overflow: hidden;
 }
-.sign-art img { max-width: 100%; max-height: 100%; object-fit: contain; }
-.sign-art.is-hero { width: min(240px, 62vw); margin: var(--tma-s2) auto var(--tma-s4); padding: 10%; }
+.sign-art img { width: calc(var(--d, .8) * 100%); height: calc(var(--d, .8) * 100%); object-fit: contain; }
+.sign-art.is-hero { width: min(260px, 66vw); margin: var(--tma-s2) auto var(--tma-s4); }
 .tma-scroll-x .tma-chip { white-space: nowrap; }
 .sign-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: var(--tma-s3); }
 .sign-tile { display: grid; align-content: start; gap: var(--tma-s1); color: inherit; text-decoration: none; }
@@ -16,5 +18,24 @@
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .sign-status { font-size: .75rem; color: var(--tma-hint); }
 .sign-status.is-mastered { color: var(--tma-success, #31b545); }
-.progress-bar { height: 8px; border-radius: 4px; background: var(--tma-separator); overflow: hidden; }
-.progress-bar > span { display: block; height: 100%; background: var(--tma-accent, var(--tg-theme-button-color)); }
+
+/* Answers: full-width rows; the result is said in words, colour only repeats it. */
+.quiz-options { display: grid; gap: var(--tma-s2); margin-top: var(--tma-gap-section); }
+.quiz-option {
+  min-height: var(--tma-row); padding: var(--tma-s3) var(--tma-s4); text-align: start;
+  border: 0; border-radius: var(--tma-r-inner); background: var(--tma-surface); color: var(--tma-text);
+  font: inherit; line-height: 1.3; cursor: pointer; transition: background var(--tma-dur-short) var(--tma-ease);
+}
+.quiz-option:active { transform: scale(.98); }
+.quiz-option:disabled { cursor: default; transform: none; }
+.quiz-option.is-picked { background: var(--tma-tonal); }
+.quiz-option.is-correct { background: var(--tma-success-tint); color: var(--tma-success); }
+.quiz-option.is-wrong { background: var(--tma-danger-tint); color: var(--tma-danger); }
+.quiz-mark { font-weight: 600; }
+.exam-top { display: flex; align-items: center; justify-content: space-between; gap: var(--tma-s3); margin: var(--tma-s2) 0; }
+.exam-top .tma-chip { font-variant-numeric: tabular-nums; }
+.exam-pass { color: var(--tma-success); }
+.result-thumb { flex: 0 0 48px; width: 48px; }
+.result-thumb .sign-art { border-radius: 10px; }
+/* Dark theme: black parts of signs (chevrons, frames, symbols) need a lighter plate to stay visible. */
+:root[data-tma-scheme="dark"] .sign-art { background: color-mix(in srgb, var(--tma-surface) 80%, #fff); }
