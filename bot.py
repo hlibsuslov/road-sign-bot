@@ -23,7 +23,9 @@ from aiogram.types import (
     InputRichBlockSectionHeading,
     InputRichBlockTable,
     InputRichMessage,
+    MenuButtonWebApp,
     RichBlockTableCell,
+    WebAppInfo,
 )
 from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
 
@@ -1077,7 +1079,32 @@ async def main():
 
     await bot.set_my_commands(BOT_COMMANDS)
 
-    await dp.start_polling(bot)
+    runner = await start_mini_app()
+    try:
+        await dp.start_polling(bot)
+    finally:
+        if runner:
+            await runner.cleanup()
+
+
+async def start_mini_app():
+    """Mini App (бібліотека знаків, прогрес). Вмикається змінними оточення:
+    WEBAPP_PORT — запускає HTTP-сервер у цьому ж процесі;
+    WEBAPP_URL  — публічна HTTPS-адреса, на яку веде кнопка меню бота."""
+    port = os.getenv("WEBAPP_PORT")
+    url = os.getenv("WEBAPP_URL")
+    runner = None
+    if port:
+        import miniapp_server
+
+        catalog = miniapp_server.build_catalog(signs_main, signs_extra, VALID_SIGNS)
+        app = miniapp_server.create_app(db=db, bot_token=BOT_TOKEN, get_catalog=lambda: catalog)
+        runner = await miniapp_server.start(app, int(port))
+    if url:
+        await bot.set_chat_menu_button(menu_button=MenuButtonWebApp(
+            text="Знаки", web_app=WebAppInfo(url=url),
+        ))
+    return runner
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -24,3 +24,6 @@ deploy.sh
 deploy.log
 deploy.log.tmp
 *.db.bak*
+
+# Mini App build output (Dockerfile builds it)
+webapp/dist/

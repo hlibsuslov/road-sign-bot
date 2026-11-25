@@ -19,8 +19,8 @@ Steps per image:
   5. QA: shape class from fill ratio and solidity, and flags for anything unusual
      (white sign faces touching the border, removed area that doesn't fit a shape).
 
-Output: data/cutouts/<id>.webp (lossless RGBA, longest side <= --size) and
-data/cutouts/manifest.json. Run: py -3 tools/cutout.py [--only 100_1,302_0] [--sheet qa.png]
+Output: data/cutouts/<id>.webp (lossless RGBA, longest side <= --size),
+data/cutouts/thumb/<id>.webp (256 px preview) and data/cutouts/manifest.json. Run: py -3 tools/cutout.py [--only 100_1,302_0] [--sheet qa.png]
 
 Dev-only dependencies: numpy, scipy (tools/requirements.txt). The bot itself only
 reads the finished WebP files.
@@ -275,6 +275,17 @@ def cut(path: Path, size: int, cmyk_profile: Path | None,
     return out, info
 
 
+THUMB_SIZE = 256
+
+
+def save_thumb(img: Image.Image, sign_id: str) -> None:
+    """Small lossy preview for lists and grids (the Mini App library)."""
+    thumb = img.copy()
+    thumb.thumbnail((THUMB_SIZE, THUMB_SIZE), Image.Resampling.LANCZOS)
+    (OUT / "thumb").mkdir(parents=True, exist_ok=True)
+    thumb.save(OUT / "thumb" / f"{sign_id}.webp", "WEBP", quality=88, method=6)
+
+
 def qa_sheet(items: list[tuple[str, Image.Image, dict]], path: Path, tile: int = 180) -> None:
     """Each cutout on a light and a dark tile, so halos and eaten rims are visible."""
     cols = 6
@@ -302,7 +313,15 @@ def main() -> int:
     ap.add_argument("--cmyk-profile", type=Path, default=DEFAULT_CMYK_PROFILE)
     ap.add_argument("--sheet", type=Path, help="write a QA contact sheet here")
     ap.add_argument("--dry-run", action="store_true", help="don't write cutouts")
+    ap.add_argument("--thumbs-only", action="store_true", help="rebuild previews from existing cutouts")
     args = ap.parse_args()
+
+    if args.thumbs_only:
+        for path in sorted(OUT.glob("*.webp")):
+            with Image.open(path) as img:
+                save_thumb(img, path.stem)
+        print(f"{len(list((OUT / 'thumb').glob('*.webp')))} previews")
+        return 0
 
     profile = args.cmyk_profile if args.cmyk_profile.exists() else None
     if profile is None:
@@ -330,6 +349,7 @@ def main() -> int:
         items.append((p.stem, img, info))
         if not args.dry_run:
             img.save(OUT / f"{p.stem}.webp", "WEBP", lossless=True, quality=100, method=6)
+            save_thumb(img, p.stem)
         mark = " FLAG " + ",".join(info["flags"]) if info["flags"] else ""
         print(f"{p.stem:10} {info['shape']:20} removed={info['removed']:.3f}{mark}")
 

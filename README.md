@@ -119,3 +119,18 @@ python tools/audit_data.py --out docs/audit/data-audit.md
 ```bash
 python -m unittest discover -s tests -v
 ```
+
+## Mini App
+
+`webapp/` — Mini App «Бібліотека знаків» (каталог, пошук, картка знака, прогрес) на
+UI-kit без залежностей; `miniapp_server.py` — HTTP API у процесі бота (aiohttp),
+`init_data.py` — перевірка `initData` підписом токена бота.
+
+| Змінна | Опис |
+|---|---|
+| `WEBAPP_PORT` | запускає сервер Mini App на цьому порту (без неї Mini App вимкнено) |
+| `WEBAPP_URL` | публічна HTTPS-адреса; бот ставить кнопку меню «Знаки» |
+
+```bash
+node webapp/build.mjs        # TypeScript -> webapp/dist (Node >= 22.18, без пакетів)
+```
