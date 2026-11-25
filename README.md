@@ -93,6 +93,25 @@ export BOT_TOKEN=...    # і за потреби DB_PATH=road_signs_bot.db
 python -u bot.py
 ```
 
+## Бібліотека знаків
+
+- `data/images/` — оригінальна графіка знаків (CMYK/RGB JPEG, PNG), у Docker-образ не потрапляє.
+- `data/cutouts/` — знаки без фону (WebP з прозорістю, ≤1024 px) і `manifest.json`
+  (форма знака, метод вирізання). Бот бере картинки звідси.
+- `tools/cutout.py` — вирізає фон: заливка «чистого білого» від краю для трикутників,
+  кіл, ромбів і STOP; скруглення кутів за геометрією самого знака для прямокутних;
+  ручні винятки — `tools/cutout_overrides.json`. Перевірка — контактні аркуші
+  на світлому й темному фоні (`--sheet qa.png`). Залежності: `tools/requirements.txt`.
+- `tools/audit_data.py` — аудит бази (id, картинки, переклади, однакові назви,
+  довжина кнопок) → `docs/audit/data-audit.md`.
+- План розвитку: `docs/telegram-ui/plan.md`.
+
+```bash
+pip install -r tools/requirements.txt
+python tools/cutout.py --sheet qa.png      # перевирізати всі знаки
+python tools/audit_data.py --out docs/audit/data-audit.md
+```
+
 ## Перевірка
 
 Тести не використовують справжній Telegram-токен і не надсилають повідомлень:

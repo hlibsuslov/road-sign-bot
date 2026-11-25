@@ -1,0 +1,14 @@
+{
+  "138_1": {"method": "flood", "why": "St. Andrew's cross: white arms touch the border, the gaps between arms are paper"},
+  "138_2": {"method": "flood", "why": "double St. Andrew's cross, same as 138_1"},
+  "140_0": {"method": "flood", "why": "triangle with a distance plate; paper beside the triangle"},
+  "506_0": {"method": "full-frame", "why": "rectangular plate with square corners; checked on the QA sheet"},
+  "507_0": {"method": "full-frame", "why": "rectangular plate with square corners; checked on the QA sheet"},
+  "556_2": {"method": "full-frame", "why": "rectangular plate with square corners; checked on the QA sheet"},
+  "920_H": {"method": "full-frame", "why": "white marker post: the white body is the sign itself"},
+  "920_VE": {"method": "full-frame", "why": "white marker post: the white body is the sign itself"},
+  "920_VM": {"method": "full-frame", "why": "white marker post: the white body is the sign itself"},
+  "930_0": {"method": "flood", "why": "barrier boards: the gap between the two boards is paper"},
+  "940_0": {"method": "flood", "why": "traffic cone on paper"},
+  "942_0": {"method": "flood", "why": "marker post on paper"}
+}

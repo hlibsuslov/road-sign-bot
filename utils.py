@@ -11,7 +11,8 @@ import logging
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 logger = logging.getLogger(__name__)
 
-IMAGE_PADDING_RATIO = 0.05
+# Вирізані знаки обрізані впритул до контуру, тому відступ більший, ніж для оригіналів.
+IMAGE_PADDING_RATIO = 0.08
 # Telegram дозволяє до 10 000 px за сумою ширини й висоти. Квадрат 2048 px
 # має великий запас, достатню якість для картки та менше навантажує RAM.
 MAX_SIGN_CANVAS_SIZE = 2048
@@ -55,20 +56,18 @@ def load_signs_list() -> List[str]:
 
 def find_sign_image(sign_id: str) -> Optional[str]:
     """
-    Шукає файл картинки для знаку в папці data/images/
-    Підтримує формати .png та .jpg/.jpeg
+    Шукає картинку знаку: спершу вирізаний знак без фону (data/cutouts/*.webp,
+    готує tools/cutout.py), потім оригінал у data/images/.
     """
+    cutout = get_path(os.path.join("data", "cutouts", f"{sign_id}.webp"))
+    if os.path.exists(cutout):
+        return cutout
+
     image_dir = get_path("data/images")
-    
-    # Перевіряємо різні можливі розширення
-    extensions = [".png", ".PNG", ".jpg", ".JPG", ".jpeg", ".JPEG"]
-    
-    for ext in extensions:
+    for ext in (".png", ".PNG", ".jpg", ".JPG", ".jpeg", ".JPEG"):
         image_path = os.path.join(image_dir, f"{sign_id}{ext}")
         if os.path.exists(image_path):
             return image_path
-    
-    # Якщо файл не знайдено
     return None
 
 def validate_signs_integrity(signs_list: List[str]) -> List[str]:

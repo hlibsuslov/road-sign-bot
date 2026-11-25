@@ -339,5 +339,32 @@ class MediaTests(unittest.TestCase):
         self.assertLessEqual(max(width, height) / min(width, height), 20)
 
 
+class SignLibraryTests(unittest.TestCase):
+    def test_every_listed_sign_uses_a_cutout(self):
+        from utils import find_sign_image, load_signs_list
+
+        missing = [s for s in load_signs_list()
+                   if not (find_sign_image(s) or "").endswith(".webp")]
+        # Three records have no artwork at all yet (see docs/audit/data-audit.md).
+        self.assertLessEqual(set(missing), {"146_0", "516_0", "521_2"})
+
+    def test_cutout_background_is_transparent(self):
+        from utils import find_sign_image
+
+        with Image.open(find_sign_image("100_1")) as triangle:
+            self.assertEqual(triangle.mode, "RGBA")
+            self.assertEqual(triangle.getpixel((0, 0))[3], 0)
+            w, h = triangle.size
+            self.assertEqual(triangle.getpixel((w // 2, h // 2))[3], 255)
+
+    def test_dark_card_has_no_white_paper_around_the_sign(self):
+        from utils import find_sign_image
+
+        output = process_sign_image(find_sign_image("302_0"), theme="dark")
+        with Image.open(output) as card:
+            corner = card.convert("RGB").getpixel((5, 5))
+        self.assertTrue(all(c < 80 for c in corner), corner)
+
+
 if __name__ == "__main__":
     unittest.main()

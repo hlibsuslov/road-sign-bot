@@ -2357,8 +2357,8 @@
       "uk": "Знак 'Forløp av forkjørsveg' вказує на те, що ви наближаєтеся до головної дороги. Це означає, що ви повинні бути уважними до руху, який має перевагу, коли ви під'їжджаєте до перехрестя. Важливо відкоригувати швидкість і бути готовим зупинитися, якщо це необхідно, щоб поступитися дорогою."
     }
   },
-  "902_OH": {
-    "id": "902_OH",
+  "902_0H": {
+    "id": "902_0H",
     "extra": {
       "no": "Bakgrunnsmarkering er et markeringsskilt som brukes for å fremheve et spesifikt område eller objekt langs veien. Dette kan være nyttig for å gjøre oppmerksom på viktige punkter som kan kreve ekstra oppmerksomhet fra sjåførene, som for eksempel en avkjørsel, en hindring eller et annet relevant element i trafikkbildet. Skiltet bidrar til økt sikkerhet ved å tydeliggjøre slike områder.",
       "en": "A background marking is a marker sign used to highlight a specific area or object along the road. This can be useful for drawing attention to important points that may require extra attention from drivers, such as an exit, an obstacle, or another relevant element in the traffic environment. The sign contributes to increased safety by clearly indicating such areas.",
@@ -2375,8 +2375,8 @@
       "uk": "Знак Комбіноване регулювання використовується як додатковий, щоб надати додаткову інформацію про регулювання дорожнього руху. Він може вказувати на те, що одночасно діють кілька типів регулювання, таких як обмеження швидкості, обмеження паркування або вимоги поступитися дорогою. Мета - дати водієві чітке розуміння правил, яких потрібно дотримуватися в цій зоні."
     }
   },
-  "902_OV": {
-    "id": "902_OV",
+  "902_0V": {
+    "id": "902_0V",
     "extra": {
       "no": "Bakgrunnsmarkering er et markeringsskilt som brukes for å forbedre synligheten av et annet skilt eller objekt. Det kan være plassert bak trafikkskilt, veiarbeid eller andre viktige elementer langs veien for å sikre at de blir lagt merke til av bilister. Dette bidrar til økt sikkerhet ved å gjøre det lettere for sjåfører å oppdage og reagere på viktige meldinger eller hindringer i tide.",
       "en": "A background marker is a marking sign used to enhance the visibility of another sign or object. It may be placed behind traffic signs, roadworks, or other important elements along the road to ensure they are noticed by drivers. This contributes to increased safety by making it easier for drivers to detect and respond to important messages or obstacles in time.",
@@ -2384,8 +2384,8 @@
       "uk": "Фонова розмітка — це знак, що використовується для покращення видимості іншого знака або об'єкта. Він може бути розміщений позаду дорожніх знаків, дорожніх робіт або інших важливих елементів уздовж дороги, щоб водії їх помічали. Це сприяє підвищенню безпеки, полегшуючи водіям виявлення та своєчасне реагування на важливі повідомлення або перешкоди."
     }
   },
-  "904_OH": {
-    "id": "904_OH",
+  "904_0H": {
+    "id": "904_0H",
     "extra": {
       "no": "Retningsmarkering er et markeringsskilt som viser riktig kjøreretning for trafikken. Det hjelper sjåfører med å navigere trygt ved å indikere hvilken vei de skal følge, spesielt i områder hvor veien kan være forvirrende eller hvor det er viktig å holde seg til en bestemt rute. Slike skilt er ofte plassert ved veikryss, rundkjøringer eller andre steder med behov for tydelig veiledning.",
       "en": "A direction marker is a marking sign that shows the correct driving direction for traffic. It helps drivers navigate safely by indicating which way to follow, especially in areas where the road may be confusing or where it is important to stick to a specific route. Such signs are often placed at intersections, roundabouts, or other locations where clear guidance is needed.",
@@ -2393,8 +2393,8 @@
       "uk": "Позначення напрямку — це знак, що показує правильний напрямок руху для транспорту. Він допомагає водіям безпечно орієнтуватися, вказуючи, в якому напрямку слід рухатися, особливо в місцях, де дорога може бути заплутаною або важливо дотримуватися певного маршруту. Такі знаки часто розміщуються на перехрестях, кільцевих розв'язках або в інших місцях, де потрібна чітка вказівка."
     }
   },
-  "904_OV": {
-    "id": "904_OV",
+  "904_0V": {
+    "id": "904_0V",
     "extra": {
       "no": "Retningsmarkering er et markeringsskilt som hjelper sjåfører med å navigere trygt rundt hindringer på veien. Skiltet gir visuell veiledning for å sikre at trafikken flyter jevnt og for å forhindre ulykker. Det er viktig å følge anvisningene på skiltet nøye for å opprettholde sikkerheten for alle trafikanter.",
       "en": "The direction marker is a sign that assists drivers in safely navigating around obstacles on the road. It provides visual guidance to ensure smooth traffic flow and prevent accidents. It is important to follow the instructions on the sign carefully to maintain safety for all road users.",
@@ -2402,8 +2402,8 @@
       "uk": "Позначення напрямку — це знак, що допомагає водіям безпечно об'їжджати перешкоди на дорозі. Він надає візуальні вказівки для забезпечення плавного руху та запобігання аваріям. Важливо уважно дотримуватися вказівок на знаку, щоб підтримувати безпеку всіх учасників дорожнього руху."
     }
   },
-  "906_OH": {
-    "id": "906_OH",
+  "906_0H": {
+    "id": "906_0H",
     "extra": {
       "no": "Hindermarkering er et markeringsskilt som indikerer et fysisk hinder i veibanen. Dette skiltet varsler sjåfører om å være oppmerksomme og manøvrere kjøretøyet for å unngå hindringen. Det er viktig å redusere hastigheten og være forberedt på å svinge eller stoppe om nødvendig for å unngå kollisjon med hindringen.",
       "en": "The obstacle marker is a marking sign indicating a physical obstacle in the roadway. This sign alerts drivers to be cautious and maneuver their vehicle to avoid the obstacle. It is important to reduce speed and be prepared to turn or stop if necessary to avoid a collision with the obstacle.",
@@ -2411,8 +2411,8 @@
       "uk": "Знак позначення перешкоди є маркувальним знаком, що вказує на фізичну перешкоду на дорозі. Цей знак попереджає водіїв бути уважними та маневрувати, щоб уникнути перешкоди. Важливо знизити швидкість і бути готовим повернути або зупинитися, якщо це необхідно, щоб уникнути зіткнення з перешкодою."
     }
   },
-  "906_OV": {
-    "id": "906_OV",
+  "906_0V": {
+    "id": "906_0V",
     "extra": {
       "no": "Hindermarkering er et markeringsskilt som brukes for å advare om et hinder i veibanen. Dette kan være en midlertidig eller permanent struktur som påvirker kjøreforholdene, som for eksempel en trafikkøy, en midtrabatt eller en annen form for fysisk barriere. Skiltet hjelper sjåfører med å være oppmerksomme og tilpasse farten for å navigere trygt rundt hindringen.",
       "en": "The obstacle marker is a marking sign used to warn of an obstacle in the roadway. This could be a temporary or permanent structure affecting driving conditions, such as a traffic island, median strip, or another type of physical barrier. The sign helps drivers stay alert and adjust their speed to safely navigate around the obstacle.",
@@ -2447,8 +2447,8 @@
       "uk": "Позначення тунелю — це вказівний знак, що позначає вхід у тунель. Цей знак допомагає водіям підготуватися до руху через тунель, де умови освітлення можуть відрізнятися від дороги зовні. Важливо звертати увагу на цей знак, щоб скоригувати швидкість і використання світла відповідно до умов тунелю."
     }
   },
-  "906_OVH": {
-    "id": "906_OVH",
+  "906_0VH": {
+    "id": "906_0VH",
     "extra": {
       "no": "Hindermarkering er et markeringsskilt som brukes for å advare om et hinder i veibanen. Dette kan være en midlertidig eller permanent hindring som krever at føreren er ekstra oppmerksom og justerer farten eller kursen for å unngå kollisjoner. Skiltet hjelper med å sikre trygg passering ved å varsle om hindringer som kan påvirke trafikkflyten.",
       "en": "The obstacle marker is a marking sign used to warn of an obstacle in the roadway. This could be a temporary or permanent obstruction that requires the driver to be extra cautious and adjust speed or direction to avoid collisions. The sign helps ensure safe passage by alerting to obstacles that may affect traffic flow.",
