@@ -1,0 +1,14 @@
+{
+  "id": "main.reset",
+  "title": "Спочатку відкрийте /start.",
+  "kind": "result",
+  "audience": "private",
+  "notes": "imported from bot.py:1099",
+  "message": {
+    "id": "main",
+    "format": "regular.plain",
+    "text": {
+      "uk": "Спочатку відкрийте /start."
+    }
+  }
+}

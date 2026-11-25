@@ -1,0 +1,14 @@
+{
+  "id": "main.data_callbacks.alt2",
+  "title": "✅ Дані видалено (branch)",
+  "kind": "result",
+  "audience": "private",
+  "notes": "imported from bot.py:1212",
+  "message": {
+    "id": "main",
+    "format": "regular.html",
+    "text": {
+      "uk": "✅ <b>Дані видалено</b>\n\nЩоб почати знову, відкрийте /start."
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "id": "main.theory.alt1",
+  "title": "cmd_theory (branch)",
+  "kind": "result",
+  "audience": "private",
+  "notes": "imported from bot.py:1138",
+  "message": {
+    "id": "main",
+    "format": "regular.html",
+    "text": {
+      "uk": "‹message text›"
+    }
+  },
+  "keyboard": {
+    "type": "inline",
+    "rows": []
+  }
+}

@@ -1,0 +1,165 @@
+{
+  "id": "studio.categories",
+  "title": "Категорії",
+  "kind": "form",
+  "audience": "private",
+  "notes": "rendered by tools/bot_ui_screens.py from the bot's own functions",
+  "message": {
+    "id": "main",
+    "format": "regular.html",
+    "text": {
+      "uk": "📂 <b>Категорії для навчання</b>\n\nТоркніться категорії, щоб увімкнути або вимкнути її.\n✓ — обрано · ○ — не обрано\n\nЗміни зберігаються одразу."
+    }
+  },
+  "keyboard": {
+    "type": "inline",
+    "rows": [
+      [
+        "b00"
+      ],
+      [
+        "b10"
+      ],
+      [
+        "b20"
+      ],
+      [
+        "b30"
+      ],
+      [
+        "b40"
+      ],
+      [
+        "b50"
+      ],
+      [
+        "b60"
+      ],
+      [
+        "b70"
+      ],
+      [
+        "b80"
+      ],
+      [
+        "b90"
+      ],
+      [
+        "b100"
+      ]
+    ]
+  },
+  "actions": {
+    "b00": {
+      "label": {
+        "uk": "○ Усі категорії · 285"
+      },
+      "type": "answer",
+      "text": {
+        "uk": "Відкривається в боті"
+      },
+      "callbackData": "cat_all"
+    },
+    "b10": {
+      "label": {
+        "uk": "✓ Fareskilt · 48"
+      },
+      "type": "answer",
+      "text": {
+        "uk": "Відкривається в боті"
+      },
+      "callbackData": "cat_fareskilt"
+    },
+    "b20": {
+      "label": {
+        "uk": "✓ Forbudsskilt · 48"
+      },
+      "type": "answer",
+      "text": {
+        "uk": "Відкривається в боті"
+      },
+      "callbackData": "cat_forbudsskilt"
+    },
+    "b30": {
+      "label": {
+        "uk": "○ Markeringsskilt · 17"
+      },
+      "type": "answer",
+      "text": {
+        "uk": "Відкривається в боті"
+      },
+      "callbackData": "cat_markeringsskilt"
+    },
+    "b40": {
+      "label": {
+        "uk": "○ Opplysningsskilt · 48"
+      },
+      "type": "answer",
+      "text": {
+        "uk": "Відкривається в боті"
+      },
+      "callbackData": "cat_opplysningsskilt"
+    },
+    "b50": {
+      "label": {
+        "uk": "○ Påbudsskilt · 11"
+      },
+      "type": "answer",
+      "text": {
+        "uk": "Відкривається в боті"
+      },
+      "callbackData": "cat_pabudsskilt"
+    },
+    "b60": {
+      "label": {
+        "uk": "○ Serviceskilt · 23"
+      },
+      "type": "answer",
+      "text": {
+        "uk": "Відкривається в боті"
+      },
+      "callbackData": "cat_serviceskilt"
+    },
+    "b70": {
+      "label": {
+        "uk": "○ Underskilt · 34"
+      },
+      "type": "answer",
+      "text": {
+        "uk": "Відкривається в боті"
+      },
+      "callbackData": "cat_underskilt"
+    },
+    "b80": {
+      "label": {
+        "uk": "○ Vegvisningsskilt · 49"
+      },
+      "type": "answer",
+      "text": {
+        "uk": "Відкривається в боті"
+      },
+      "callbackData": "cat_vegvisningsskilt"
+    },
+    "b90": {
+      "label": {
+        "uk": "○ Vikepliktsskilt · 7"
+      },
+      "type": "answer",
+      "text": {
+        "uk": "Відкривається в боті"
+      },
+      "callbackData": "cat_vikeplikt"
+    },
+    "b100": {
+      "label": {
+        "uk": "Готово"
+      },
+      "type": "answer",
+      "text": {
+        "uk": "Відкривається в боті"
+      },
+      "style": "success",
+      "callbackData": "cat_done"
+    }
+  }
+}

@@ -147,3 +147,20 @@ teoriprøven — 38 з 45, розбір помилок, результат на�
 ```bash
 node webapp/build.mjs        # TypeScript -> webapp/dist (Node >= 22.18, без пакетів)
 ```
+
+## Карта бота і Studio (без токена)
+
+`bot-ui/` — карта екранів бота у форматі скилла telegram-bot-ui: імпорт із коду
+(`tgui.py map import --source . --into bot-ui`) плюс екрани, які
+`tools/bot_ui_screens.py` рендерить справжніми функціями бота на демо-учні
+(головна, картки навчання, квіз, теорія, статистика, Преміум, «Мої дані»).
+
+```bash
+py -3 tools/bot_ui_screens.py                       # оновити екрани з коду бота
+py -3 <skill>/scripts/tgui.py map validate --project bot-ui
+py -3 <skill>/scripts/tgui.py map export-snapshot --project bot-ui --output docs/telegram-ui/studio.html --format html
+py -3 <skill>/scripts/tgui.py map studio --project bot-ui   # Studio на 127.0.0.1
+```
+
+`studio.html` — офлайн-Studio в одному файлі: карта переходів, симулятор чату,
+екрани. Це симуляція: як саме відмалюють клієнти Telegram, перевіряється на тестовому боті.

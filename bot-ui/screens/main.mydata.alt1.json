@@ -1,0 +1,50 @@
+{
+  "id": "main.mydata.alt1",
+  "title": "cmd_mydata (branch)",
+  "kind": "menu",
+  "audience": "private",
+  "notes": "imported from bot.py:1179",
+  "message": {
+    "id": "main",
+    "format": "regular.html",
+    "text": {
+      "uk": "‹message text›"
+    }
+  },
+  "keyboard": {
+    "type": "inline",
+    "rows": [
+      [
+        "vidaliti_moi_dani"
+      ],
+      [
+        "nazad"
+      ]
+    ]
+  },
+  "actions": {
+    "vidaliti_moi_dani": {
+      "label": {
+        "uk": "Видалити мої дані"
+      },
+      "type": "handler",
+      "handlerId": "main.data_callbacks",
+      "outcomes": {
+        "main": "main.data_callbacks",
+        "alt1": "main.data_callbacks.alt1",
+        "alt2": "main.data_callbacks.alt2"
+      },
+      "callbackData": "data_delete"
+    },
+    "nazad": {
+      "label": {
+        "uk": "← Назад"
+      },
+      "type": "answer",
+      "text": {
+        "uk": "Спочатку /start"
+      },
+      "callbackData": "settings_back"
+    }
+  }
+}

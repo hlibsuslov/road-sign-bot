@@ -1,0 +1,50 @@
+{
+  "id": "studio.mydata",
+  "title": "Мої дані",
+  "kind": "result",
+  "audience": "private",
+  "notes": "rendered by tools/bot_ui_screens.py from the bot's own functions",
+  "message": {
+    "id": "main",
+    "format": "regular.html",
+    "text": {
+      "uk": "🧾 <b>Мої дані</b>\n\n<b>Telegram ID:</b> 1001\n<b>Ім'я:</b> Olena\n<b>Username:</b> @olena_k\n<b>Мова Telegram:</b> uk\n<b>З нами з:</b> 26.11.2026\n<b>Звідки прийшли:</b> напряму\n<b>Мови навчання:</b> no → uk\n<b>Категорія прав:</b> B\n<b>Дата іспиту:</b> 2026-12-18\n<b>Денна мета:</b> 10\n<b>Нагадування:</b> так\n<b>Часовий пояс:</b> —\n<b>Знаків у навчанні:</b> 59\n<b>Відповідей усього:</b> 0\n<b>Преміум:</b> ні\n\nМи зберігаємо лише те, що потрібно для навчання й нагадувань. Історію імен не ведемо. Видалити все можна кнопкою нижче."
+    }
+  },
+  "keyboard": {
+    "type": "inline",
+    "rows": [
+      [
+        "b00"
+      ],
+      [
+        "b10"
+      ]
+    ]
+  },
+  "actions": {
+    "b00": {
+      "label": {
+        "uk": "Видалити мої дані"
+      },
+      "type": "handler",
+      "handlerId": "main.data_callbacks",
+      "outcomes": {
+        "main": "main.data_callbacks",
+        "alt1": "main.data_callbacks.alt1",
+        "alt2": "main.data_callbacks.alt2"
+      },
+      "callbackData": "data_delete"
+    },
+    "b10": {
+      "label": {
+        "uk": "← Назад"
+      },
+      "type": "answer",
+      "text": {
+        "uk": "Спочатку /start"
+      },
+      "callbackData": "settings_back"
+    }
+  }
+}

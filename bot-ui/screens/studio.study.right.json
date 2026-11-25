@@ -1,0 +1,44 @@
+{
+  "id": "studio.study.right",
+  "title": "Квіз: правильно",
+  "kind": "result",
+  "audience": "private",
+  "notes": "caption edit of the quiz card",
+  "message": {
+    "id": "main",
+    "format": "regular.html",
+    "text": {
+      "uk": "✅ <b>Правильно</b>\n\n<b>Innkjøring forbudt</b>\n<i>В'їзд заборонено</i>\n\nРівень: 3/6 · повторення через 3 дн"
+    }
+  },
+  "keyboard": {
+    "type": "inline",
+    "rows": [
+      [
+        "b00",
+        "b01"
+      ]
+    ]
+  },
+  "actions": {
+    "b00": {
+      "label": {
+        "uk": "Далі"
+      },
+      "type": "navigate",
+      "to": "studio.study.intro",
+      "presentation": "edit",
+      "style": "primary",
+      "callbackData": "study_next"
+    },
+    "b01": {
+      "label": {
+        "uk": "Пояснення"
+      },
+      "type": "navigate",
+      "to": "studio.study.more",
+      "presentation": "edit",
+      "callbackData": "more|302_0"
+    }
+  }
+}

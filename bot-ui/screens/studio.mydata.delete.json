@@ -1,0 +1,51 @@
+{
+  "id": "studio.mydata.delete",
+  "title": "Видалення даних: підтвердження",
+  "kind": "confirmation",
+  "audience": "private",
+  "notes": "rendered by tools/bot_ui_screens.py from the bot's own functions",
+  "message": {
+    "id": "main",
+    "format": "regular.html",
+    "text": {
+      "uk": "<b>Видалити всі ваші дані?</b>\n\nБуде видалено профіль, прогрес знаків і теорії, статистику й тести. Записи про платежі залишаться для обліку. Скасувати це неможливо."
+    }
+  },
+  "keyboard": {
+    "type": "inline",
+    "rows": [
+      [
+        "b00"
+      ],
+      [
+        "b10"
+      ]
+    ]
+  },
+  "actions": {
+    "b00": {
+      "label": {
+        "uk": "Видалити всі мої дані"
+      },
+      "type": "handler",
+      "handlerId": "main.data_callbacks",
+      "outcomes": {
+        "main": "main.data_callbacks",
+        "alt1": "main.data_callbacks.alt1",
+        "alt2": "main.data_callbacks.alt2"
+      },
+      "style": "danger",
+      "callbackData": "data_delete_confirm"
+    },
+    "b10": {
+      "label": {
+        "uk": "← Залишити дані"
+      },
+      "type": "answer",
+      "text": {
+        "uk": "Спочатку /start"
+      },
+      "callbackData": "settings_back"
+    }
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "id": "main.set_category_callback",
+  "title": "✅ Категорії оновлено",
+  "kind": "menu",
+  "audience": "private",
+  "notes": "imported from bot.py:963",
+  "message": {
+    "id": "main",
+    "format": "regular.html",
+    "text": {
+      "uk": "✅ <b>Категорії оновлено</b>\n\n{h}\nЗнаків у добірці: {count}\n\nОберіть «{btn_study}», щоб продовжити."
+    }
+  },
+  "keyboard": {
+    "type": "reply",
+    "rows": [
+      [
+        "vcitisy"
+      ],
+      [
+        "statistika",
+        "kategorii"
+      ],
+      [
+        "nalastuvanny"
+      ]
+    ],
+    "placeholder": {
+      "uk": "Оберіть дію"
+    }
+  },
+  "actions": {
+    "vcitisy": {
+      "label": {
+        "uk": "🎓 Вчитися"
+      },
+      "type": "disabled",
+      "style": "primary"
+    },
+    "statistika": {
+      "label": {
+        "uk": "📊 Статистика"
+      },
+      "type": "disabled"
+    },
+    "kategorii": {
+      "label": {
+        "uk": "📂 Категорії"
+      },
+      "type": "disabled"
+    },
+    "nalastuvanny": {
+      "label": {
+        "uk": "⚙️ Налаштування"
+      },
+      "type": "disabled"
+    }
+  }
+}

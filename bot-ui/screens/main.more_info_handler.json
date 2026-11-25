@@ -1,0 +1,33 @@
+{
+  "id": "main.more_info_handler",
+  "title": "ℹ️ {h}",
+  "kind": "menu",
+  "audience": "private",
+  "notes": "imported from bot.py:815",
+  "message": {
+    "id": "main",
+    "format": "regular.html",
+    "text": {
+      "uk": "ℹ️ <b>{h}</b>\n\n"
+    }
+  },
+  "keyboard": {
+    "type": "inline",
+    "rows": [
+      [
+        "prodovjiti_navcanny"
+      ]
+    ]
+  },
+  "actions": {
+    "prodovjiti_navcanny": {
+      "label": {
+        "uk": "Продовжити навчання"
+      },
+      "type": "navigate",
+      "to": "studio.study.intro",
+      "style": "primary",
+      "callbackData": "study_next"
+    }
+  }
+}

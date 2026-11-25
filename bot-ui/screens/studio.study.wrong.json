@@ -1,0 +1,44 @@
+{
+  "id": "studio.study.wrong",
+  "title": "Квіз: помилка",
+  "kind": "result",
+  "audience": "private",
+  "notes": "caption edit of the quiz card",
+  "message": {
+    "id": "main",
+    "format": "regular.html",
+    "text": {
+      "uk": "❌ <b>Неправильно</b>\n\nПравильна відповідь:\n<b>Innkjøring forbudt</b>\n<i>В'їзд заборонено</i>\n\nSkiltet indikerer at det er forbudt å kjøre inn på veien.\n\nЦей знак повториться за кілька хвилин."
+    }
+  },
+  "keyboard": {
+    "type": "inline",
+    "rows": [
+      [
+        "b00",
+        "b01"
+      ]
+    ]
+  },
+  "actions": {
+    "b00": {
+      "label": {
+        "uk": "Далі"
+      },
+      "type": "navigate",
+      "to": "studio.study.intro",
+      "presentation": "edit",
+      "style": "primary",
+      "callbackData": "study_next"
+    },
+    "b01": {
+      "label": {
+        "uk": "Пояснення"
+      },
+      "type": "navigate",
+      "to": "studio.study.more",
+      "presentation": "edit",
+      "callbackData": "more|302_0"
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "id": "main.choose_study_language",
+  "title": "Оберіть мову перекладу:",
+  "kind": "form",
+  "audience": "private",
+  "notes": "imported from bot.py:578",
+  "message": {
+    "id": "main",
+    "format": "regular.html",
+    "text": {
+      "uk": "<b>Оберіть мову перекладу:</b>"
+    }
+  },
+  "keyboard": {
+    "type": "inline",
+    "rows": []
+  },
+  "input": {
+    "field": "input.choose_translation_language",
+    "to": "main.translation_language_prompt"
+  }
+}

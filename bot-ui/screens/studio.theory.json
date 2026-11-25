@@ -1,0 +1,56 @@
+{
+  "id": "studio.theory",
+  "title": "Теорія і тести",
+  "kind": "menu",
+  "audience": "private",
+  "notes": "rendered by tools/bot_ui_screens.py from the bot's own functions",
+  "message": {
+    "id": "main",
+    "format": "regular.html",
+    "text": {
+      "uk": "📚 <b>Теорія і тести</b> · категорія B\n\n• Дорожні знаки — 286 знаків\n• Пріоритет і перехрестя — 4 питань\n• Швидкість, дистанція і гальмування — 4 питань\n• Зупинка і стоянка — 1 питань\n• Людина за кермом — 2 питань\n• Автомобіль і безпека — 3 питань\n• Зимова їзда — 1 питань\n• ДТП і перша допомога — 2 питань\n\nПрактика за темами й тести з'являться в застосунку «Знаки»."
+    }
+  },
+  "keyboard": {
+    "type": "inline",
+    "rows": [
+      [
+        "b00"
+      ],
+      [
+        "b10"
+      ],
+      [
+        "b20"
+      ]
+    ]
+  },
+  "actions": {
+    "b00": {
+      "label": {
+        "uk": "Відкрити застосунок"
+      },
+      "type": "url",
+      "url": "https://example.app/",
+      "style": "primary"
+    },
+    "b10": {
+      "label": {
+        "uk": "🎓 Вчити знаки"
+      },
+      "type": "navigate",
+      "to": "studio.study.intro",
+      "presentation": "edit",
+      "callbackData": "study_next"
+    },
+    "b20": {
+      "label": {
+        "uk": "← Головна"
+      },
+      "type": "navigate",
+      "to": "studio.home",
+      "presentation": "edit",
+      "callbackData": "home_open"
+    }
+  }
+}

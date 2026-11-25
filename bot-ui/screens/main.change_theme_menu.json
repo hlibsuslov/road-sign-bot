@@ -1,0 +1,58 @@
+{
+  "id": "main.change_theme_menu",
+  "title": "🎨 Тема карток",
+  "kind": "menu",
+  "audience": "private",
+  "notes": "imported from bot.py:1018",
+  "message": {
+    "id": "main",
+    "format": "regular.html",
+    "text": {
+      "uk": "🎨 <b>Тема карток</b>\n\nПоточна тема: <b>{h}</b>\nВона змінює фон зображень дорожніх знаків."
+    }
+  },
+  "keyboard": {
+    "type": "inline",
+    "rows": [
+      [
+        "button_label",
+        "button_label_2"
+      ],
+      [
+        "nazad"
+      ]
+    ]
+  },
+  "actions": {
+    "button_label": {
+      "label": {
+        "uk": "‹button label›"
+      },
+      "type": "answer",
+      "text": {
+        "uk": "Не вдалося змінити тему. Відкрийте налаштування заново."
+      },
+      "callbackData": "theme_light"
+    },
+    "button_label_2": {
+      "label": {
+        "uk": "‹button label›"
+      },
+      "type": "answer",
+      "text": {
+        "uk": "Не вдалося змінити тему. Відкрийте налаштування заново."
+      },
+      "callbackData": "theme_dark"
+    },
+    "nazad": {
+      "label": {
+        "uk": "← Назад"
+      },
+      "type": "answer",
+      "text": {
+        "uk": "Спочатку /start"
+      },
+      "callbackData": "settings_back"
+    }
+  }
+}
