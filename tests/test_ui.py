@@ -176,7 +176,7 @@ class KeyboardTests(unittest.TestCase):
     def test_theme_keyboard_reflects_current_state(self):
         markup = get_theme_keyboard("dark")
         self.assertEqual(markup.inline_keyboard[0][0].text, "Світла")
-        self.assertEqual(markup.inline_keyboard[0][1].text, "✓ Темна")
+        self.assertEqual(markup.inline_keyboard[0][1].text, "✅ Темна")   # icon 'selected', Unicode fallback
         self.assertIsNone(markup.inline_keyboard[0][0].style)
         self.assertEqual(markup.inline_keyboard[0][1].style, "success")
 
@@ -184,13 +184,13 @@ class KeyboardTests(unittest.TestCase):
         study = get_language_keyboard(current_language="no")
         translation = get_translation_keyboard(current_language="uk")
 
-        self.assertTrue(study.inline_keyboard[0][0].text.startswith("✓ "))
+        self.assertTrue(study.inline_keyboard[0][0].text.startswith("✅ "))
         self.assertEqual(study.inline_keyboard[0][0].style, "success")
         uk_button = next(
             button for button in inline_buttons(translation)
             if button.callback_data == "trans_uk"
         )
-        self.assertTrue(uk_button.text.startswith("✓ "))
+        self.assertTrue(uk_button.text.startswith("✅ "))
         self.assertEqual(uk_button.style, "success")
 
     def test_sdk_exposes_rich_messages_and_button_styles(self):
@@ -407,8 +407,9 @@ class HomeAndDataTests(unittest.TestCase):
         text, kb = app.home_screen(self.db.get_user(9), "<b>Ola</b>")
         self.assertIn("&lt;b&gt;Ola&lt;/b&gt;", text)     # names are escaped
         self.assertIn("категорія A1", text)
-        self.assertIn("До іспиту", text)
-        self.assertIn("знаки: 0 з 2", text)
+        self.assertIn("іспит через", text)
+        self.assertIn("Вивчено 0 знаків з 2", text)
+        self.assertNotIn("▰", text)                       # no ASCII progress bar any more
         self.assertEqual(kb.inline_keyboard[0][0].callback_data, "study_next")
 
     def test_mydata_lists_the_record_and_delete_removes_it(self):

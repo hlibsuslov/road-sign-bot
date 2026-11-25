@@ -1,7 +1,7 @@
 import logging
 import sqlite3
 import time
-from datetime import date
+from datetime import date, timedelta
 from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -350,6 +350,18 @@ class Database:
                 ORDER BY day DESC
             """, (user_id,)).fetchall()
             return [r["day"] for r in rows]
+
+    def get_daily_series(self, user_id: int, days: int = 14) -> List[int]:
+        """Відповіді за останні `days` днів, від найстарішого до сьогодні (0 — без активності)."""
+        today = date.today()
+        keys = [(today - timedelta(days=i)).isoformat() for i in range(days - 1, -1, -1)]
+        with self.get_connection() as conn:
+            rows = conn.execute(
+                "SELECT day, answered FROM daily_stats WHERE user_id = ? AND day >= ?",
+                (user_id, keys[0]),
+            ).fetchall()
+        by_day = {r["day"]: r["answered"] for r in rows}
+        return [by_day.get(k, 0) for k in keys]
 
     def get_day_stats(self, user_id: int, day: str) -> tuple:
         """(відповідей, правильних) за конкретний день."""

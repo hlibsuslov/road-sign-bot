@@ -28,7 +28,7 @@
   "actions": {
     "b00": {
       "label": {
-        "uk": "Відкрити застосунок"
+        "uk": "📱 Відкрити застосунок"
       },
       "type": "url",
       "url": "https://example.app/",
@@ -45,7 +45,7 @@
     },
     "b20": {
       "label": {
-        "uk": "← Головна"
+        "uk": "🏠 Головна"
       },
       "type": "navigate",
       "to": "studio.home",

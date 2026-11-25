@@ -22,7 +22,7 @@
   "actions": {
     "b00": {
       "label": {
-        "uk": "Продовжити навчання"
+        "uk": "🎓 Продовжити навчання"
       },
       "type": "navigate",
       "to": "studio.study.intro",

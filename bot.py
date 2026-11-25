@@ -30,12 +30,14 @@ from aiogram.types import (
 )
 from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
 
+import icons
 import learning
 import premium
+import progress_card
 import theory
 from database import Database
 from keyboards import (
-    BTN_STUDY, BTN_STATS, BTN_CATEGORIES, BTN_SETTINGS,
+    BTN_STUDY, REPLY_TEXTS,
     get_language_keyboard,
     get_translation_keyboard,
     get_main_menu_keyboard,
@@ -52,6 +54,7 @@ from keyboards import (
     get_theory_keyboard,
     get_mydata_keyboard,
     get_delete_confirm_keyboard,
+    get_stats_keyboard,
 )
 from utils import (
     load_signs_main,
@@ -89,7 +92,7 @@ signs_list = load_signs_list()
 VALID_SIGNS = []
 
 CAPTION_LIMIT = 1024
-HTML_TAG_RE = re.compile(r"</?(?:b|i|code)>")
+HTML_TAG_RE = re.compile(r"</?(?:b|i|code)>|<tg-emoji[^>]*>|</tg-emoji>")
 
 BOT_COMMANDS = [
     BotCommand(command="start", description="Відкрити головне меню"),
@@ -254,9 +257,9 @@ async def send_quiz(message: Message, user, sign_id: str, edit: bool = False):
     progress = db.get_progress(user["user_id"], sign_id)
     box = progress["box"] if progress else 0
 
-    caption = "❓ <b>Що означає цей знак?</b>"
+    caption = f"{icons.tg('question')} <b>Що означає цей знак?</b>"
     if box > 0:
-        caption += f"\n\n🔁 Повторення • рівень {box}/{learning.MAX_BOX}"
+        caption += f"\n\n{icons.tg('repeat')} Повторення · рівень {box} з {learning.MAX_BOX}"
     kb = get_quiz_keyboard(sign_id, options, signs_main, study_lang)
     await send_sign_photo(message, sign_id, user["theme"] or 'light', caption, kb, edit=edit)
 
@@ -533,21 +536,29 @@ def home_screen(user, first_name: str | None):
     due = sum(1 for s, p in progress_map.items() if s in valid_set and p["next_review_at"] <= now)
     streak = learning.count_streak(db.get_active_days(user_id))
     licence = user["licence_class"] if "licence_class" in user.keys() else "B"
-    lines = [
-        f"👋 <b>{h(first_name or 'Вітаємо')}</b> · категорія {h(licence)}",
-        "",
-        f"<code>{h(learning.progress_bar(mastered, len(VALID_SIGNS)))}</code> знаки: {mastered} з {len(VALID_SIGNS)}",
-        f"До повторення: {due}" + (f" · серія {h(days_text(streak))}" if streak else ""),
-    ]
+    total = len(VALID_SIGNS)
+    pct = round(mastered / total * 100) if total else 0
+    today, _ = db.get_day_stats(user_id, date.today().isoformat())
+    goal = user["daily_goal"] if "daily_goal" in user.keys() else 10
+    lines = [f"<b>{h(first_name or 'Вітаємо')}</b> · категорія {h(licence)}", ""]
+    lines.append(f"{icons.tg('target')} Сьогодні {min(today, goal)} з {goal}"
+                 + (" — мету виконано" if today >= goal else ""))
+    lines.append(f"{icons.tg('correct')} Вивчено {mastered} знаків з {total} · {pct}%")
+    if due:
+        lines.append(f"{icons.tg('repeat')} Чекають на повторення: {due}")
+    extras = []
+    if streak:
+        extras.append(f"{icons.tg('streak')} {h(days_text(streak))} поспіль")
     exam_date = user["exam_date"] if "exam_date" in user.keys() else None
     if exam_date:
         try:
             left = (date.fromisoformat(exam_date) - date.today()).days
             if left >= 0:
-                lines.append(f"До іспиту: {h(days_text(left))}")
+                extras.append(f"{icons.tg('calendar')} іспит через {h(days_text(left))}")
         except ValueError:
             pass
-    lines += ["", "Теорія за темами, ситуації й тести — у розділі «Теорія і тести»."]
+    if extras:
+        lines.append(" · ".join(extras))
     return "\n".join(lines), get_home_keyboard(due, WEBAPP_URL)
 
 
@@ -655,7 +666,7 @@ async def choose_translation_language(callback: CallbackQuery, state: FSMContext
 # ==================== Навчання ====================
 
 @dp.message(Command("learn"))
-@dp.message(F.text == BTN_STUDY)
+@dp.message(F.text.in_(REPLY_TEXTS["study"]))
 async def cmd_learn(message: Message, state: FSMContext):
     await state.clear()
     await send_study_step(message, message.from_user.id)
@@ -738,7 +749,7 @@ async def quiz_answer_handler(callback: CallbackQuery):
 
     # Формуємо фідбек
     if correct:
-        text = "✅ <b>Правильно</b>\n\n"
+        text = f"{icons.tg('correct')} <b>Правильно</b>\n\n"
         text += sign_name_block(sign_id, study_lang, trans_lang)
         if new_box >= learning.MASTERED_BOX and progress["box"] < learning.MASTERED_BOX:
             text += "\n<b>Знак вивчено.</b> Він іноді повертатиметься для закріплення."
@@ -747,7 +758,7 @@ async def quiz_answer_handler(callback: CallbackQuery):
             text += f"\nРівень: {new_box}/{learning.MAX_BOX} · повторення через {h(wait)}"
     else:
         sign = signs_main[sign_id]
-        text = "❌ <b>Неправильно</b>\n\nПравильна відповідь:\n"
+        text = f"{icons.tg('wrong')} <b>Неправильно</b>\n\nПравильна відповідь:\n"
         text += sign_name_block(sign_id, study_lang, trans_lang)
         text += f"\n{h(sign['descriptions'].get(study_lang, ''))}\n"
         text += "\nЦей знак повториться за кілька хвилин."
@@ -801,7 +812,7 @@ async def more_info_handler(callback: CallbackQuery):
 
     await callback.answer()
     name = sign_data["names"].get(study_lang, "")
-    text = f"ℹ️ <b>{h(name)}</b>\n\n"
+    text = f"{icons.tg('info')} <b>{h(name)}</b>\n\n"
     if extra_data and "extra" in extra_data:
         extra_text = extra_data["extra"].get(study_lang, "Додаткова інформація недоступна.")
         text += f"{h(extra_text)}\n"
@@ -822,13 +833,74 @@ async def more_info_handler(callback: CallbackQuery):
 # ==================== Статистика ====================
 
 @dp.message(Command("stats"))
-@dp.message(F.text == BTN_STATS)
+@dp.message(F.text.in_(REPLY_TEXTS["stats"]))
 async def cmd_stats(message: Message, state: FSMContext):
     await state.clear()
     await show_stats(message, message.from_user.id)
 
 
 async def show_stats(message: Message, user_id: int):
+    """Прогрес — одна картинка й короткий підпис; таблиці — кнопкою «Таблиця детально»."""
+    user = db.get_user(user_id)
+    if not user:
+        await message.answer("Спочатку відкрийте /start.")
+        return
+    valid_set = set(VALID_SIGNS)
+    progress_map = {s: p for s, p in db.get_progress_map(user_id).items() if s in valid_set}
+    now = int(time.time())
+    mastered = sum(1 for p in progress_map.values() if p["box"] >= learning.MASTERED_BOX)
+    due = sum(1 for p in progress_map.values() if p["next_review_at"] <= now)
+    per_cat: dict[str, list[int]] = {}
+    for s_id in VALID_SIGNS:
+        code = signs_main.get(s_id, {}).get("category_code")
+        if not code:
+            continue
+        per_cat.setdefault(code, [0, 0])
+        per_cat[code][1] += 1
+        p = progress_map.get(s_id)
+        if p and p["box"] >= learning.MASTERED_BOX:
+            per_cat[code][0] += 1
+    goal = user["daily_goal"] or 10
+    series = db.get_daily_series(user_id, 14)
+    answered, correct_total = db.get_answer_totals(user_id)
+    streak = learning.count_streak(db.get_active_days(user_id))
+    card = progress_card.render(
+        mastered=mastered, total=len(VALID_SIGNS),
+        categories=[(code, done, count) for code, (done, count) in per_cat.items()],
+        daily=series, goal=goal, theme=user["theme"] or "light",
+    )
+    caption = progress_caption(mastered=mastered, total=len(VALID_SIGNS), due=due, today=series[-1],
+                               goal=goal, answered=answered, correct=correct_total, streak=streak)
+    await message.answer_photo(
+        BufferedInputFile(card.read(), filename="progress.png"),
+        caption=caption, parse_mode=ParseMode.HTML, reply_markup=get_stats_keyboard(),
+    )
+
+
+def progress_caption(*, mastered: int, total: int, due: int, today: int, goal: int,
+                     answered: int, correct: int, streak: int) -> str:
+    accuracy = f"{round(correct / answered * 100)}%" if answered else "—"
+    return (
+        f"<b>Ваш прогрес</b>\n\n"
+        f"{icons.tg('correct')} Вивчено {mastered} з {total} знаків\n"
+        f"{icons.tg('repeat')} До повторення: {due}\n"
+        f"{icons.tg('target')} Сьогодні {today} з {goal} · точність {accuracy}\n"
+        + (f"{icons.tg('streak')} {h(days_text(streak))} поспіль\n" if streak else "")
+        + "\nКоло — уся база знаків. Стовпчики знизу — відповіді за 14 днів, пунктир — ваша денна мета. "
+        "Праворуч — категорії знаків."
+    )
+
+
+@dp.callback_query(F.data == "stats_details")
+async def stats_details_handler(callback: CallbackQuery):
+    if db.get_user(callback.from_user.id) is None:
+        await callback.answer("Спочатку відкрийте /start.", show_alert=True)
+        return
+    await callback.answer()
+    await show_stats_table(callback.message, callback.from_user.id)
+
+
+async def show_stats_table(message: Message, user_id: int):
     user = db.get_user(user_id)
     if not user:
         await message.answer("Спочатку відкрийте /start.")
@@ -890,14 +962,13 @@ async def show_stats(message: Message, user_id: int):
         await message.answer(
             build_statistics_text(**stats_kwargs),
             parse_mode=ParseMode.HTML,
-            reply_markup=get_main_menu_keyboard(),
         )
 
 
 # ==================== Категорії ====================
 
 @dp.message(Command("categories"))
-@dp.message(F.text == BTN_CATEGORIES)
+@dp.message(F.text.in_(REPLY_TEXTS["categories"]))
 async def choose_category_handler(message: Message, state: FSMContext):
     await state.clear()
     await show_categories(message, message.from_user.id)
@@ -911,8 +982,8 @@ async def show_categories(message: Message, user_id: int):
 
     await message.answer(
         "📂 <b>Категорії для навчання</b>\n\n"
-        "Торкніться категорії, щоб увімкнути або вимкнути її.\n"
-        "✓ — обрано · ○ — не обрано\n\n"
+        "Торкніться категорії, щоб увімкнути або вимкнути її. "
+        f"{icons.tg('selected')} — у навчанні.\n\n"
         "Зміни зберігаються одразу.",
         parse_mode=ParseMode.HTML,
         reply_markup=get_categories_keyboard(
@@ -986,7 +1057,7 @@ async def set_category_callback(callback: CallbackQuery):
 # ==================== Налаштування ====================
 
 @dp.message(Command("settings"))
-@dp.message(F.text == BTN_SETTINGS)
+@dp.message(F.text.in_(REPLY_TEXTS["settings"]))
 async def cmd_settings(message: Message, state: FSMContext):
     await state.clear()
     user = db.get_user(message.from_user.id)
@@ -1140,52 +1211,15 @@ async def cmd_theory(message: Message, state: FSMContext):
 
 
 def mydata_text(user) -> str:
-    """Усе, що бот зберігає про користувача (references/user-profile.md: /mydata)."""
+    """Коротко, що бот про вас знає. Детальніше не потрібно: цього досить, щоб вирішити, чи видаляти."""
     uid = user["user_id"]
-    progress = db.get_progress_map(uid)
-    answered, _ = db.get_answer_totals(uid)
-    sub = db.get_subscription(uid)
+    name = " ".join(x for x in (user["first_name"], f"@{user['username']}" if user["username"] else None) if x) or "—"
     joined = date.fromtimestamp(user["created_at"]).strftime("%d.%m.%Y")
-    rows = [
-        ("Telegram ID", str(uid)),
-        ("Ім'я", user["first_name"] or "—"),
-        ("Username", f"@{user['username']}" if user["username"] else "—"),
-        ("Мова Telegram", user["language_code"] or "—"),
-        ("З нами з", joined),
-        ("Звідки прийшли", user["acq_value"] or "напряму"),
-        ("Мови навчання", f"{user['study_language']} → {user['translation_language']}"),
-        ("Категорія прав", user["licence_class"]),
-        ("Дата іспиту", user["exam_date"] or "—"),
-        ("Денна мета", str(user["daily_goal"])),
-        ("Нагадування", "так" if user["reminders"] else "ні"),
-        ("Часовий пояс", user["timezone"] or "—"),
-        ("Знаків у навчанні", str(len(progress))),
-        ("Відповідей усього", str(answered)),
-        ("Преміум", date.fromtimestamp(sub["expires_at"]).strftime("до %d.%m.%Y") if sub else "ні"),
-    ]
-    body = "\n".join(f"<b>{h(k)}:</b> {h(v)}" for k, v in rows)
-    return ("🧾 <b>Мої дані</b>\n\n" + body +
-            "\n\nМи зберігаємо лише те, що потрібно для навчання й нагадувань. "
-            "Історію імен не ведемо. Видалити все можна кнопкою нижче.")
-
-
-@dp.message(Command("mydata"))
-async def cmd_mydata(message: Message, state: FSMContext):
-    await state.clear()
-    user = db.get_user(message.from_user.id)
-    if user is None:
-        await message.answer("Про вас нічого не збережено.")
-        return
-    await message.answer(mydata_text(user), parse_mode=ParseMode.HTML, reply_markup=get_mydata_keyboard())
-
-
-@dp.message(Command("deletedata"))
-async def cmd_deletedata(message: Message, state: FSMContext):
-    await state.clear()
-    if db.get_user(message.from_user.id) is None:
-        await message.answer("Про вас нічого не збережено.")
-        return
-    await message.answer(delete_prompt_text(), parse_mode=ParseMode.HTML, reply_markup=get_delete_confirm_keyboard())
+    plan = f"категорія {user['licence_class']}" + (f", іспит {user['exam_date']}" if user["exam_date"] else "")
+    return (f"{icons.tg('data')} <b>Мої дані</b>\n\n"
+            f"{h(name)} · з {joined}\n"
+            f"{h(plan)} · {len(db.get_progress_map(uid))} знаків у навчанні\n\n"
+            "Зберігаємо лише те, що потрібно для навчання й нагадувань.")
 
 
 def delete_prompt_text() -> str:
@@ -1322,6 +1356,7 @@ async def main():
     VALID_SIGNS = validate_signs_integrity(signs_list)
 
     await bot.set_my_commands(BOT_COMMANDS)
+    await icons.load(bot)
     try:
         await bot.set_my_description(description=BOT_DESCRIPTION)
         await bot.set_my_short_description(short_description=BOT_SHORT_DESCRIPTION)

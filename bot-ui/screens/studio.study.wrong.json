@@ -23,7 +23,7 @@
   "actions": {
     "b00": {
       "label": {
-        "uk": "Далі"
+        "uk": "➡️ Далі"
       },
       "type": "navigate",
       "to": "studio.study.intro",
@@ -33,7 +33,7 @@
     },
     "b01": {
       "label": {
-        "uk": "Пояснення"
+        "uk": "ℹ️ Пояснення"
       },
       "type": "navigate",
       "to": "studio.study.more",

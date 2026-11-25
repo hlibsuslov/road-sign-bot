@@ -133,7 +133,7 @@ def build() -> list[dict]:
     home_text, home_kb = bot.home_screen(user, "Olena")
     routes = {"study_next": "studio.study.intro", "home_theory": "studio.theory", "home_stats": "studio.stats",
               "home_categories": "studio.categories", "home_settings": "studio.settings", "premium_open": "studio.premium",
-              "home_open": "studio.home", "settings_back": "studio.settings", "data_show": "studio.mydata",
+              "home_open": "studio.home", "settings_back": "studio.settings", "stats_details": "studio.stats", "data_show": "studio.mydata",
               "data_delete": "studio.mydata.delete", "q|302_0|302_0": "studio.study.right",
               "q|302_0|100_1": "studio.study.wrong", "q|302_0|204_0": "studio.study.wrong",
               "q|302_0|206_0": "studio.study.wrong", "more|302_0": "studio.study.more", "know|100_1": "studio.study.quiz"}
@@ -149,12 +149,10 @@ def build() -> list[dict]:
     more = f"ℹ️ <b>{bot.h(bot.signs_main['302_0']['names']['no'])}</b>\n\n{bot.h(extra.get('no', ''))}\n\n<i>{bot.h(extra.get('uk', ''))}</i>"
 
     progress = db.get_progress_map(uid)
-    stats_text = bot.build_statistics_text(
+    stats_text = bot.progress_caption(
         mastered=sum(1 for p in progress.values() if p["box"] >= learning.MASTERED_BOX), total=len(valid),
-        in_learning=sum(1 for p in progress.values() if p["box"] < learning.MASTERED_BOX),
-        new=len(valid) - len(progress), due_now=sum(1 for p in progress.values() if p["next_review_at"] <= now),
-        answered=180, correct_total=151, today_answered=12, today_correct=10, streak=4,
-        category_rows=[("Попереджувальні знаки", 25, 48), ("Заборонні знаки", 15, 48), ("Інформаційні знаки", 0, 48)])
+        due=sum(1 for p in progress.values() if p["next_review_at"] <= now), today=12, goal=20,
+        answered=180, correct=151, streak=4)
     prem_text, prem_kb = premium.screen(premium_db, uid, "https://t.me/$demo-invoice")
 
     return [
@@ -166,8 +164,8 @@ def build() -> list[dict]:
         screen("studio.study.wrong", "Квіз: помилка", "result", wrong, kb.get_feedback_keyboard("302_0"), routes, notes="caption edit of the quiz card"),
         screen("studio.study.more", "Пояснення знака", "result", more, kb.get_details_keyboard(), routes),
         screen("studio.theory", "Теорія і тести", "menu", bot.theory_screen_text("B"), kb.get_theory_keyboard("https://example.app/"), routes),
-        screen("studio.stats", "Статистика (текстова версія)", "result", stats_text, None,
-               notes="the bot sends this as a Rich Message with three tables; this is its HTML fallback"),
+        screen("studio.stats", "Прогрес: картка", "result", stats_text, kb.get_stats_keyboard(), routes,
+               notes="photo: progress_card.render() (ring, 14-day answers vs goal, bars per category); this is its caption"),
         screen("studio.categories", "Категорії", "form",
                "📂 <b>Категорії для навчання</b>\n\nТоркніться категорії, щоб увімкнути або вимкнути її.\n✓ — обрано · ○ — не обрано\n\nЗміни зберігаються одразу.",
                kb.get_categories_keyboard(bot.signs_main, "no", "fareskilt,forbudsskilt", valid), routes),
@@ -191,7 +189,17 @@ def main() -> int:
     changes = []
     for doc in docs:
         if doc["id"] in existing:
-            ops = [{"op": "set", "path": f"/{k}", "value": doc[k]} for k in ("title", "kind", "notes", "message", "keyboard", "actions") if k in doc]
+            # only the paths a patch may edit (bot_ui store ALLOWED_PATHS)
+            current = json.loads((ROOT / "bot-ui" / "screens" / f"{doc['id']}.json").read_text("utf-8"))
+            ops = [{"op": "set", "path": f"/{k}", "value": doc[k]} for k in ("title", "kind", "notes") if k in doc]
+            ops.append({"op": "set", "path": "/message/text", "value": doc["message"]["text"]})
+            if "keyboard" in doc:
+                ops.append({"op": "set", "path": "/keyboard", "value": doc["keyboard"]})
+            for aid in (current.get("actions") or {}):
+                if aid not in (doc.get("actions") or {}):
+                    ops.append({"op": "remove", "path": f"/actions/{aid}"})
+            for aid, act in (doc.get("actions") or {}).items():
+                ops.append({"op": "set", "path": f"/actions/{aid}", "value": act})
             changes.append({"screenId": doc["id"], "ops": ops})
         else:
             changes.append({"screenId": doc["id"], "create": doc})

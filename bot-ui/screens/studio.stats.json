@@ -1,14 +1,56 @@
 {
   "id": "studio.stats",
-  "title": "Статистика (текстова версія)",
+  "title": "Прогрес: картка",
   "kind": "result",
   "audience": "private",
-  "notes": "the bot sends this as a Rich Message with three tables; this is its HTML fallback",
+  "notes": "photo: progress_card.render() (ring, 14-day answers vs goal, bars per category); this is its caption",
   "message": {
     "id": "main",
     "format": "regular.html",
     "text": {
-      "uk": "📊 <b>Ваш прогрес</b>\n\n<code>▰▱▱▱▱▱▱▱▱▱</code> 14%\n\n<b>Знаки</b>\nВивчено: 40/286\nНа вивченні: 19\nНові: 227\nДо повторення: 8\n\n<b>Результати</b>\nТочність: 151/180 · 84%\nСьогодні: 10/12 · 83%\nСерія: 4 дні\n\n<b>За категоріями</b>\nПопереджувальні знаки: 25/48 · 52%\nЗаборонні знаки: 15/48 · 31%\nІнформаційні знаки: 0/48 · 0%\n"
+      "uk": "<b>Ваш прогрес</b>\n\n✅ Вивчено 40 з 286 знаків\n🔁 До повторення: 8\n🎯 Сьогодні 12 з 20 · точність 84%\n🔥 4 дні поспіль\n\nКоло — уся база знаків. Стовпчики знизу — відповіді за 14 днів, пунктир — ваша денна мета. Праворуч — категорії знаків."
+    }
+  },
+  "keyboard": {
+    "type": "inline",
+    "rows": [
+      [
+        "b00"
+      ],
+      [
+        "b10",
+        "b11"
+      ]
+    ]
+  },
+  "actions": {
+    "b00": {
+      "label": {
+        "uk": "🎓 Вчитися"
+      },
+      "type": "navigate",
+      "to": "studio.study.intro",
+      "presentation": "edit",
+      "style": "primary",
+      "callbackData": "study_next"
+    },
+    "b10": {
+      "label": {
+        "uk": "ℹ️ Таблиця детально"
+      },
+      "type": "navigate",
+      "to": "studio.stats",
+      "presentation": "edit",
+      "callbackData": "stats_details"
+    },
+    "b11": {
+      "label": {
+        "uk": "🏠 Головна"
+      },
+      "type": "navigate",
+      "to": "studio.home",
+      "presentation": "edit",
+      "callbackData": "home_open"
     }
   }
 }

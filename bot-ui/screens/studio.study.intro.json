@@ -26,7 +26,7 @@
   "actions": {
     "b00": {
       "label": {
-        "uk": "Далі"
+        "uk": "➡️ Далі"
       },
       "type": "navigate",
       "to": "studio.study.intro",
@@ -36,7 +36,7 @@
     },
     "b10": {
       "label": {
-        "uk": "Я вже знаю"
+        "uk": "👍 Я вже знаю"
       },
       "type": "navigate",
       "to": "studio.study.quiz",
@@ -45,7 +45,7 @@
     },
     "b11": {
       "label": {
-        "uk": "Пояснення"
+        "uk": "ℹ️ Пояснення"
       },
       "type": "answer",
       "text": {

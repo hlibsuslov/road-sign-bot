@@ -32,18 +32,6 @@
       "screen": "studio.theory"
     },
     {
-      "id": "mydata",
-      "type": "command",
-      "command": "mydata",
-      "screen": "studio.mydata"
-    },
-    {
-      "id": "deletedata",
-      "type": "command",
-      "command": "deletedata",
-      "screen": "main.deletedata"
-    },
-    {
       "id": "learn",
       "type": "command",
       "command": "learn",

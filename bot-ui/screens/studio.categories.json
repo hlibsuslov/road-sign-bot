@@ -52,7 +52,7 @@
   "actions": {
     "b00": {
       "label": {
-        "uk": "○ Усі категорії · 285"
+        "uk": "⚪️ Усі категорії · 285"
       },
       "type": "answer",
       "text": {
@@ -62,7 +62,7 @@
     },
     "b10": {
       "label": {
-        "uk": "✓ Fareskilt · 48"
+        "uk": "✅ Fareskilt · 48"
       },
       "type": "answer",
       "text": {
@@ -72,7 +72,7 @@
     },
     "b20": {
       "label": {
-        "uk": "✓ Forbudsskilt · 48"
+        "uk": "✅ Forbudsskilt · 48"
       },
       "type": "answer",
       "text": {
@@ -82,7 +82,7 @@
     },
     "b30": {
       "label": {
-        "uk": "○ Markeringsskilt · 17"
+        "uk": "⚪️ Markeringsskilt · 17"
       },
       "type": "answer",
       "text": {
@@ -92,7 +92,7 @@
     },
     "b40": {
       "label": {
-        "uk": "○ Opplysningsskilt · 48"
+        "uk": "⚪️ Opplysningsskilt · 48"
       },
       "type": "answer",
       "text": {
@@ -102,7 +102,7 @@
     },
     "b50": {
       "label": {
-        "uk": "○ Påbudsskilt · 11"
+        "uk": "⚪️ Påbudsskilt · 11"
       },
       "type": "answer",
       "text": {
@@ -112,7 +112,7 @@
     },
     "b60": {
       "label": {
-        "uk": "○ Serviceskilt · 23"
+        "uk": "⚪️ Serviceskilt · 23"
       },
       "type": "answer",
       "text": {
@@ -122,7 +122,7 @@
     },
     "b70": {
       "label": {
-        "uk": "○ Underskilt · 34"
+        "uk": "⚪️ Underskilt · 34"
       },
       "type": "answer",
       "text": {
@@ -132,7 +132,7 @@
     },
     "b80": {
       "label": {
-        "uk": "○ Vegvisningsskilt · 49"
+        "uk": "⚪️ Vegvisningsskilt · 49"
       },
       "type": "answer",
       "text": {
@@ -142,7 +142,7 @@
     },
     "b90": {
       "label": {
-        "uk": "○ Vikepliktsskilt · 7"
+        "uk": "⚪️ Vikepliktsskilt · 7"
       },
       "type": "answer",
       "text": {
@@ -152,7 +152,7 @@
     },
     "b100": {
       "label": {
-        "uk": "Готово"
+        "uk": "🏁 Готово"
       },
       "type": "answer",
       "text": {

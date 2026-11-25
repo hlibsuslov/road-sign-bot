@@ -15,24 +15,27 @@
     "type": "inline",
     "rows": [
       [
-        "b00"
+        "b00",
+        "b01"
       ],
       [
         "b10"
       ],
       [
-        "b20",
-        "b21"
+        "b20"
       ],
       [
         "b30"
+      ],
+      [
+        "b40"
       ]
     ]
   },
   "actions": {
     "b00": {
       "label": {
-        "uk": "🌐 Змінити мови"
+        "uk": "🌐 Мови"
       },
       "type": "answer",
       "text": {
@@ -42,26 +45,16 @@
     },
     "b10": {
       "label": {
-        "uk": "🎨 Змінити тему карток"
-      },
-      "type": "answer",
-      "text": {
-        "uk": "Відкривається в боті"
-      },
-      "callbackData": "change_theme"
-    },
-    "b20": {
-      "label": {
-        "uk": "⭐ Преміум"
+        "uk": "⭐️ Преміум"
       },
       "type": "navigate",
       "to": "studio.premium",
       "presentation": "edit",
       "callbackData": "premium_open"
     },
-    "b21": {
+    "b20": {
       "label": {
-        "uk": "🧾 Мої дані"
+        "uk": "📄 Мої дані"
       },
       "type": "navigate",
       "to": "studio.mydata",
@@ -77,6 +70,25 @@
         "uk": "Відкривається в боті"
       },
       "callbackData": "reset_progress"
+    },
+    "b01": {
+      "label": {
+        "uk": "🎨 Тема карток"
+      },
+      "type": "answer",
+      "text": {
+        "uk": "Відкривається в боті"
+      },
+      "callbackData": "change_theme"
+    },
+    "b40": {
+      "label": {
+        "uk": "🏠 Головна"
+      },
+      "type": "navigate",
+      "to": "studio.home",
+      "presentation": "edit",
+      "callbackData": "home_open"
     }
   }
 }
