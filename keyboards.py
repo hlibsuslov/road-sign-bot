@@ -83,8 +83,10 @@ def get_main_menu_keyboard() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=keyboard,
         resize_keyboard=True,
-        one_time_keyboard=False,
-        is_persistent=True,
+        # folds away after a tap, so the study card and its answers have the whole screen;
+        # the keyboard icon in the input field brings it back
+        one_time_keyboard=True,
+        is_persistent=False,
         input_field_placeholder="Оберіть дію",
     )
 

@@ -46,6 +46,7 @@ let category = 'all';
 let query = '';
 let examSize = 20;
 let theoryIndex: TheoryIndex | null = null;
+const tabHistory: Tab[] = [];   // Telegram's Back walks back through the tabs the user opened
 
 const studyLang = (): Lang => me.study_language ?? 'no';
 const transLang = (): Lang | null => {
@@ -143,8 +144,23 @@ function setTab(t: Tab): void {
   renderRoot();
   window.scrollTo(0, 0);
 }
+function syncTabBack(): void {
+  tma.nav.pop('tab');
+  if (tabHistory.length) tma.nav.push({ id: 'tab', kind: 'screen', onBack: backTab });
+}
+function backTab(): void {
+  const prev = tabHistory.pop();
+  if (prev) setTab(prev);
+  syncTabBack();
+}
 for (const b of document.querySelectorAll<HTMLButtonElement>('[data-tab]')) {
-  b.onclick = () => { if (b.dataset.tab !== tab) { tma.haptic.select(); setTab(b.dataset.tab as Tab); } };
+  b.onclick = () => {
+    if (b.dataset.tab === tab) return;
+    tma.haptic.select();
+    tabHistory.push(tab);
+    setTab(b.dataset.tab as Tab);
+    syncTabBack();
+  };
 }
 /** Full-screen flows (sign card, learning session, test, results) share one screen and Telegram's Back. */
 function openScreen(onBack: () => void): HTMLElement {
@@ -284,7 +300,8 @@ function studyRoot(): Kid[] {
   const due = Object.values(me.progress ?? {}).filter((p) => p.due).length;
   const pool = me.pool ?? signs.length;
   const known = Object.keys(me.progress ?? {}).length;
-  tma.mainButton({ text: due ? `Знаки · ${due} до повторення` : 'Вчити знаки', onClick: () => openStudy() });
+  tma.mainButton({ text: due ? `Картки · ${due} до повторення` : 'Картки зі знаками', onClick: () => openSwipe() });
+  tma.secondaryButton({ text: 'Квіз з варіантами', onClick: () => openStudy() });
   const topics = h('ul', { class: 'tma-list' }, h('li', {}, h('p', { class: 'tma-hint', style: 'margin:0;padding:var(--tma-s3) var(--tma-s4)' }, 'Завантаження тем…')));
   void loadTopics(topics);
   return [largeTitle('Навчання'),
@@ -488,6 +505,71 @@ function openStudy(): void {
   }
 
   drawCounter();
+  void next();
+}
+
+/* ---------------------------------------------------------------- swipe cards */
+function openSwipe(): void {
+  const el = openScreen(async () => { await refreshMe(); closeScreen(); });
+  let known = 0, unknown = 0;
+  const counter = h('p', { class: 'tma-footnote', style: 'text-align:center;margin:0', 'aria-live': 'polite' });
+  const stage = h('div', { class: 'swipe-stage' });
+  const hint = h('p', { class: 'tma-footnote', style: 'text-align:center' }, 'Торкніться картки, щоб перевернути. Вправо — знаю, вліво — ще ні.');
+  el.append(counter, stage, hint);
+  const draw = () => { counter.textContent = `Знаю ${known} · ще вчу ${unknown}`; };
+
+  async function rate(s: Sign, isKnown: boolean, card: HTMLElement, isNew: boolean): Promise<void> {
+    card.classList.add(isKnown ? 'is-gone-right' : 'is-gone-left');
+    if (isKnown) { known++; tma.haptic.success(); } else { unknown++; tma.haptic.warning(); }
+    draw();
+    try {
+      if (isNew) await api('/api/study/seen', { method: 'POST', body: { sign_id: s.id } });
+      await api('/api/study/rate', { method: 'POST', body: { sign_id: s.id, known: isKnown } });
+    } catch { toast('Відповідь не збережено.'); }
+    window.setTimeout(() => void next(), 220);
+  }
+
+  async function next(): Promise<void> {
+    tma.mainButton(null); tma.secondaryButton(null);
+    let step: Step;
+    try { step = await api<Step>('/api/study/next'); } catch (e) {
+      if (e instanceof ApiErr && e.code === 'premium_required') { await refreshMe(); closeScreen(); return; }
+      stage.replaceChildren(placeholder('Не вдалося завантажити', 'Перевірте з’єднання.')); return;
+    }
+    const s = 'sign_id' in step ? byId.get(step.sign_id) : undefined;
+    if (step.mode === 'done' || !s) {
+      stage.replaceChildren(placeholder('На зараз усе', step.mode === 'done' && step.next_in != null
+        ? `Наступне повторення через ${duration(step.next_in)}.` : 'Усі знаки з добірки пройдено.'));
+      tma.mainButton({ text: 'Готово', onClick: async () => { await refreshMe(); closeScreen(); } });
+      return;
+    }
+    const isNew = step.mode === 'new';
+    const back = h('div', { class: 'swipe-face is-back' },
+      h('p', { class: 'tma-title3', style: 'margin:0' }, text(s.names)),
+      transLang() ? h('p', { class: 'tma-hint', style: 'margin:0' }, text(s.names, transLang())) : '',
+      h('p', { style: 'margin:0' }, text(s.descriptions)));
+    const front = h('div', { class: 'swipe-face' }, art(s, true),
+      h('p', { class: 'tma-footnote', style: 'margin:0' }, isNew ? 'Новий знак' : 'Що означає цей знак?'));
+    const card = h('div', { class: 'swipe-card', role: 'button', tabindex: '0', 'aria-label': 'Картка знака, торкніться, щоб перевернути' }, front, back);
+    stage.replaceChildren(card);
+    let startX = 0, dx = 0, dragging = false;
+    card.onpointerdown = (e) => { dragging = true; startX = e.clientX; dx = 0; card.setPointerCapture(e.pointerId); card.classList.add('is-dragging'); };
+    card.onpointermove = (e) => {
+      if (!dragging) return;
+      dx = e.clientX - startX;
+      card.style.transform = `translateX(${dx}px) rotate(${dx / 18}deg)`;
+      card.dataset.lean = dx > 40 ? 'right' : dx < -40 ? 'left' : '';
+    };
+    card.onpointerup = () => {
+      dragging = false; card.classList.remove('is-dragging');
+      if (Math.abs(dx) > 90) { void rate(s, dx > 0, card, isNew); return; }
+      card.style.transform = ''; card.dataset.lean = '';
+      if (Math.abs(dx) < 6) { card.classList.toggle('is-flipped'); tma.haptic.tap(); }
+    };
+    tma.mainButton({ text: 'Знаю', onClick: () => void rate(s, true, card, isNew) });
+    tma.secondaryButton({ text: 'Ще ні', onClick: () => void rate(s, false, card, isNew) });
+  }
+  draw();
   void next();
 }
 
@@ -729,6 +811,8 @@ function planSection(): HTMLElement {
 
 /* ---------------------------------------------------------------- start */
 async function main(): Promise<void> {
+  // open at full height straight away (the kit gates by client version inside the call)
+  (tma.tg as unknown as { expand?: () => void } | null)?.expand?.();
   tma.chrome({ header: 'secondary_bg_color', background: 'secondary_bg_color', bottomBar: 'secondary_bg_color' });
   const start = parseStartParam(tma.launch.tgWebAppStartParam, {
     sign: /^sign-([0-9]{3}_[0-9A-Z]{1,4})$/, tab: /^(study|exam|progress)$/,

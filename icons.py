@@ -61,10 +61,11 @@ def _key(e: str) -> str:
 
 @dataclass
 class _State:
-    ids: dict[str, str]
+    ids: dict[str, str]                 # any custom emoji: used inside message texts
+    static_ids: dict[str, str] = None   # static only: the only ones allowed on buttons
 
 
-_state = _State(ids={})
+_state = _State(ids={}, static_ids={})
 
 
 def enabled() -> bool:
@@ -88,16 +89,22 @@ def tg(slot: str) -> str:
 
 
 def label(slot: str, text: str) -> tuple[str, str | None]:
-    """(button text, icon_custom_emoji_id). With an icon the text carries no emoji of its own."""
-    cid = emoji_id(slot)
+    """(button text, icon_custom_emoji_id). Buttons never get an animated emoji: only a slot
+    resolved from a static pack becomes an icon; otherwise the Unicode character stays."""
+    cid = (_state.static_ids or {}).get(slot) if enabled() else None
     return (text, cid) if cid else (f"{char(slot)} {text}", None)
 
 
-def resolve_from_sets(sets: list) -> dict[str, str]:
+def is_static(sticker) -> bool:
+    return not (sticker.is_animated or sticker.is_video)
+
+
+def resolve_from_sets(sets: list, static_only: bool = False) -> dict[str, str]:
     """slot -> custom_emoji_id from getStickerSet results (static stickers preferred)."""
     by_emoji: dict[str, str] = {}
     for sticker_set in sets:
-        for st in sorted(sticker_set.stickers, key=lambda s: bool(s.is_animated or s.is_video)):
+        stickers = [s for s in sticker_set.stickers if is_static(s)] if static_only else sticker_set.stickers
+        for st in sorted(stickers, key=lambda s: not is_static(s)):
             if st.custom_emoji_id and st.emoji:
                 by_emoji.setdefault(_key(st.emoji), st.custom_emoji_id)
     found = {}
@@ -121,6 +128,13 @@ async def load(bot) -> None:
         except Exception as exc:
             logger.warning("Premium emoji: pack %s not loaded (%s)", name, exc)
     _state.ids = resolve_from_sets(sets)
+    button_sets = []
+    for name in [n.strip() for n in os.getenv("PREMIUM_EMOJI_BUTTON_PACKS", "").split(",") if n.strip()]:
+        try:
+            button_sets.append(await bot.get_sticker_set(name=name))
+        except Exception as exc:
+            logger.warning("Premium emoji: button pack %s not loaded (%s)", name, exc)
+    _state.static_ids = resolve_from_sets(sets + button_sets, static_only=True)
     missing = sorted(set(SLOTS) - set(_state.ids))
-    logger.info("Premium emoji: %s of %s slots resolved; Unicode for %s",
-                len(_state.ids), len(SLOTS), ", ".join(missing) or "none")
+    logger.info("Premium emoji: %s of %s slots in texts, %s static for buttons; Unicode for %s",
+                len(_state.ids), len(SLOTS), len(_state.static_ids), ", ".join(missing) or "none")

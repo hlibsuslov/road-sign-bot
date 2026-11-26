@@ -325,11 +325,25 @@ async def send_study_step(message: Message, user_id: int, edit: bool = False):
             f"У черзі: {in_queue} знаків.\n"
         )
         kb = get_main_menu_keyboard()
+        wait_text = ""
         if nearest:
             wait = max(0, nearest["next_review_at"] - int(time.time()))
-            text += f"Найближче повторення — через {h(learning.humanize_seconds(wait))}."
+            wait_text = f"Найближче повторення — через {learning.humanize_seconds(wait)}."
+            text += h(wait_text)
             kb = get_early_review_keyboard()
-        await message.answer(text, parse_mode=ParseMode.HTML, reply_markup=kb)
+        rich = InputRichMessage(blocks=[
+            InputRichBlockSectionHeading(text="На зараз усе", size=2),
+            InputRichBlockParagraph(text=f"У черзі: {in_queue} знаків. {wait_text}".strip()),
+            rich_buttons(
+                RichMessageButton(text="Повторити зараз", callback_data="study_early", style="primary") if nearest else None,
+                app_button("Теорія в застосунку"),
+            ),
+        ])
+        try:
+            await message.answer_rich(rich_message=rich)
+        except TelegramAPIError as exc:
+            logger.warning("Rich done fallback: %s", exc)
+            await message.answer(text, parse_mode=ParseMode.HTML, reply_markup=kb)
 
 
 def rich_cell(value, *, header: bool = False,
@@ -888,11 +902,18 @@ async def more_info_handler(callback: CallbackQuery):
     else:
         text += "Додаткова інформація для цього знаку недоступна."
 
-    await callback.message.answer(
-        text,
-        parse_mode=ParseMode.HTML,
-        reply_markup=get_details_keyboard(),
-    )
+    explanation = (extra_data or {}).get("extra", {}) if extra_data else {}
+    blocks = [InputRichBlockSectionHeading(text=name, size=2),
+              InputRichBlockParagraph(text=explanation.get(study_lang) or "Додаткова інформація недоступна.")]
+    if trans_lang not in ("none", study_lang) and explanation.get(trans_lang):
+        blocks.append(InputRichBlockParagraph(text=explanation[trans_lang]))
+    blocks.append(rich_buttons(RichMessageButton(text="Продовжити навчання", callback_data="study_next",
+                                                 style="primary")))
+    try:
+        await callback.message.answer_rich(rich_message=InputRichMessage(blocks=blocks))
+    except TelegramAPIError as exc:
+        logger.warning("Rich explanation fallback: %s", exc)
+        await callback.message.answer(text, parse_mode=ParseMode.HTML, reply_markup=get_details_keyboard())
 
 
 # ==================== Статистика ====================
