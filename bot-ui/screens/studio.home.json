@@ -1,0 +1,90 @@
+{
+  "id": "studio.home",
+  "title": "Головна (повернення)",
+  "kind": "entry",
+  "audience": "private",
+  "notes": "rendered by tools/bot_ui_screens.py from the bot's own functions",
+  "message": {
+    "id": "main",
+    "format": "regular.html",
+    "text": {
+      "uk": "<b>Olena</b> · категорія B\n\n🎯 Сьогодні 0 з 10\n✅ Вивчено 40 знаків з 286 · 14%\n🔁 Чекають на повторення: 8\n📅 іспит через 22 дні"
+    }
+  },
+  "keyboard": {
+    "type": "inline",
+    "rows": [
+      [
+        "b00"
+      ],
+      [
+        "b10"
+      ],
+      [
+        "b20",
+        "b21"
+      ],
+      [
+        "b30",
+        "b31"
+      ]
+    ]
+  },
+  "actions": {
+    "b00": {
+      "label": {
+        "uk": "🎓 Вчитися · 8 до повторення"
+      },
+      "type": "navigate",
+      "to": "studio.study.intro",
+      "presentation": "edit",
+      "style": "primary",
+      "callbackData": "study_next"
+    },
+    "b10": {
+      "label": {
+        "uk": "📚 Теорія і тести"
+      },
+      "type": "navigate",
+      "to": "studio.theory",
+      "presentation": "edit",
+      "callbackData": "home_theory"
+    },
+    "b20": {
+      "label": {
+        "uk": "📊 Прогрес"
+      },
+      "type": "navigate",
+      "to": "studio.stats",
+      "presentation": "edit",
+      "callbackData": "home_stats"
+    },
+    "b21": {
+      "label": {
+        "uk": "📂 Категорії"
+      },
+      "type": "navigate",
+      "to": "studio.categories",
+      "presentation": "edit",
+      "callbackData": "home_categories"
+    },
+    "b30": {
+      "label": {
+        "uk": "⚙️ Налаштування"
+      },
+      "type": "navigate",
+      "to": "studio.settings",
+      "presentation": "edit",
+      "callbackData": "home_settings"
+    },
+    "b31": {
+      "label": {
+        "uk": "⭐️ Преміум"
+      },
+      "type": "navigate",
+      "to": "studio.premium",
+      "presentation": "edit",
+      "callbackData": "premium_open"
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "id": "studio.premium",
+  "title": "Преміум: оформлення",
+  "kind": "menu",
+  "audience": "private",
+  "notes": "rendered by tools/bot_ui_screens.py from the bot's own functions",
+  "message": {
+    "id": "main",
+    "format": "regular.html",
+    "text": {
+      "uk": "⭐ <b>Преміум</b>\n\n• навчання і тести в застосунку «Знаки»\n• режим іспиту з таймером і розбором помилок\n• повна статистика прогресу\n\n<b>50 ⭐ на місяць.</b> Скасувати можна будь-коли, доступ залишиться до кінця місяця."
+    }
+  },
+  "keyboard": {
+    "type": "inline",
+    "rows": [
+      [
+        "b00"
+      ]
+    ]
+  },
+  "actions": {
+    "b00": {
+      "label": {
+        "uk": "Оформити · 50 ⭐ на місяць"
+      },
+      "type": "url",
+      "url": "https://t.me/$demo-invoice",
+      "style": "primary"
+    }
+  }
+}

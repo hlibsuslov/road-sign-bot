@@ -1,0 +1,22 @@
+{
+  "id": "main.start",
+  "title": "👋 Підготовка до теоретичного іспиту в Но…",
+  "kind": "entry",
+  "audience": "private",
+  "notes": "imported from bot.py:510",
+  "message": {
+    "id": "main",
+    "format": "regular.html",
+    "text": {
+      "uk": "👋 <b>Підготовка до теоретичного іспиту в Норвегії</b>\n\nЗнаки, правила й ситуації на дорозі, тести як на teoriprøven. Бот повертає те, що ви забуваєте, саме тоді, коли треба повторити.\n\n<b>Оберіть мову назв і питань:</b>"
+    }
+  },
+  "keyboard": {
+    "type": "inline",
+    "rows": []
+  },
+  "input": {
+    "field": "input.choose_study_language",
+    "to": "main.study_language_prompt"
+  }
+}

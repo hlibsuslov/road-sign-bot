@@ -1,0 +1,14 @@
+{
+  "id": "main.reset_confirm_handler",
+  "title": "✅ Прогрес скинуто",
+  "kind": "result",
+  "audience": "private",
+  "notes": "imported from bot.py:1085",
+  "message": {
+    "id": "main",
+    "format": "regular.html",
+    "text": {
+      "uk": "✅ <b>Прогрес скинуто</b>\n\nУсі знаки знову доступні для навчання."
+    }
+  }
+}

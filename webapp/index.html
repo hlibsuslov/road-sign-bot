@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="uk" data-tma-style="soft">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>Дорожні знаки Норвегії</title>
+  <script src="https://telegram.org/js/telegram-web-app.js?65"></script>
+  <link rel="stylesheet" href="_kit/tma.css">
+  <link rel="stylesheet" href="app.css">
+  <script type="module" src="dist/app.js"></script>
+</head>
+<body>
+<div class="tma-content-cap">
+  <main class="tma-page" id="root" aria-busy="true"></main>
+  <main class="tma-page tma-screen" id="detail" hidden></main>
+</div>
+<nav class="tma-tabbar tma-glass" role="tablist" aria-label="Розділи" id="tabbar">
+  <button type="button" role="tab" aria-selected="true" data-tab="signs"><svg class="tma-icon" aria-hidden="true"><use href="_kit/icons.svg#i-grid"/></svg>Знаки</button>
+  <button type="button" role="tab" aria-selected="false" data-tab="study"><svg class="tma-icon" aria-hidden="true"><use href="_kit/icons.svg#i-document"/></svg>Навчання</button>
+  <button type="button" role="tab" aria-selected="false" data-tab="exam"><svg class="tma-icon" aria-hidden="true"><use href="_kit/icons.svg#i-flag"/></svg>Тест</button>
+  <button type="button" role="tab" aria-selected="false" data-tab="progress"><svg class="tma-icon" aria-hidden="true"><use href="_kit/icons.svg#i-chart-bar"/></svg>Прогрес</button>
+</nav>
+<div class="tma-snackbar" role="status" id="snackbar" hidden></div>
+<button type="button" class="tma-btn is-filled is-lg" data-tma-fallback="main-button" hidden></button>
+</body>
+</html>

@@ -1,0 +1,59 @@
+{
+  "id": "main.study_early_handler",
+  "title": "Немає знаків для повторення",
+  "kind": "menu",
+  "audience": "private",
+  "notes": "imported from bot.py:696",
+  "message": {
+    "id": "main",
+    "format": "regular.html",
+    "text": {
+      "uk": "<b>Немає знаків для повторення</b>\n\nОберіть «Вчитися», щоб відкрити наступний знак."
+    }
+  },
+  "keyboard": {
+    "type": "reply",
+    "rows": [
+      [
+        "vcitisy"
+      ],
+      [
+        "statistika",
+        "kategorii"
+      ],
+      [
+        "nalastuvanny"
+      ]
+    ],
+    "placeholder": {
+      "uk": "Оберіть дію"
+    }
+  },
+  "actions": {
+    "vcitisy": {
+      "label": {
+        "uk": "🎓 Вчитися"
+      },
+      "type": "disabled",
+      "style": "primary"
+    },
+    "statistika": {
+      "label": {
+        "uk": "📊 Статистика"
+      },
+      "type": "disabled"
+    },
+    "kategorii": {
+      "label": {
+        "uk": "📂 Категорії"
+      },
+      "type": "disabled"
+    },
+    "nalastuvanny": {
+      "label": {
+        "uk": "⚙️ Налаштування"
+      },
+      "type": "disabled"
+    }
+  }
+}

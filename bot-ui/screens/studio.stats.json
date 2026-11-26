@@ -1,0 +1,56 @@
+{
+  "id": "studio.stats",
+  "title": "Прогрес: картка",
+  "kind": "result",
+  "audience": "private",
+  "notes": "photo: progress_card.render() (ring, 14-day answers vs goal, bars per category); this is its caption",
+  "message": {
+    "id": "main",
+    "format": "regular.html",
+    "text": {
+      "uk": "<b>Ваш прогрес</b>\n\n✅ Вивчено 40 з 286 знаків\n🔁 До повторення: 8\n🎯 Сьогодні 12 з 20 · точність 84%\n🔥 4 дні поспіль\n\nКоло — уся база знаків. Стовпчики знизу — відповіді за 14 днів, пунктир — ваша денна мета. Праворуч — категорії знаків."
+    }
+  },
+  "keyboard": {
+    "type": "inline",
+    "rows": [
+      [
+        "b00"
+      ],
+      [
+        "b10",
+        "b11"
+      ]
+    ]
+  },
+  "actions": {
+    "b00": {
+      "label": {
+        "uk": "🎓 Вчитися"
+      },
+      "type": "navigate",
+      "to": "studio.study.intro",
+      "presentation": "edit",
+      "style": "primary",
+      "callbackData": "study_next"
+    },
+    "b10": {
+      "label": {
+        "uk": "ℹ️ Таблиця детально"
+      },
+      "type": "navigate",
+      "to": "studio.stats",
+      "presentation": "edit",
+      "callbackData": "stats_details"
+    },
+    "b11": {
+      "label": {
+        "uk": "🏠 Головна"
+      },
+      "type": "navigate",
+      "to": "studio.home",
+      "presentation": "edit",
+      "callbackData": "home_open"
+    }
+  }
+}

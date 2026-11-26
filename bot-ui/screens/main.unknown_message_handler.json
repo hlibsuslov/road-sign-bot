@@ -1,0 +1,14 @@
+{
+  "id": "main.unknown_message_handler",
+  "title": "Відкрийте /start, щоб налаштувати бота.",
+  "kind": "result",
+  "audience": "private",
+  "notes": "imported from bot.py:1271",
+  "message": {
+    "id": "main",
+    "format": "regular.plain",
+    "text": {
+      "uk": "Відкрийте /start, щоб налаштувати бота."
+    }
+  }
+}

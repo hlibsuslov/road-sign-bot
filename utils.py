@@ -11,10 +11,45 @@ import logging
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 logger = logging.getLogger(__name__)
 
-IMAGE_PADDING_RATIO = 0.05
 # Telegram дозволяє до 10 000 px за сумою ширини й висоти. Квадрат 2048 px
 # має великий запас, достатню якість для картки та менше навантажує RAM.
 MAX_SIGN_CANVAS_SIZE = 2048
+
+# Оптичний розмір: знаки різної форми мають виглядати однаково «важкими».
+# Частка площі квадрата, яку займає сам знак (без прозорого фону):
+SIGN_VISUAL_AREA = 0.42
+# Межі для довшої сторони знака як частки сторони квадрата.
+SIGN_SCALE_MIN, SIGN_SCALE_MAX = 0.6, 0.94
+_manifest_cache: Optional[Dict] = None
+
+
+def cutout_manifest() -> Dict:
+    """data/cutouts/manifest.json: форма, заповнення (fill) і пропорції кожного знака."""
+    global _manifest_cache
+    if _manifest_cache is None:
+        try:
+            with open(get_path("data/cutouts/manifest.json"), encoding="utf-8") as f:
+                _manifest_cache = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            _manifest_cache = {}
+    return _manifest_cache
+
+
+def sign_scale(sign_id: str) -> float:
+    """Довша сторона знака як частка квадратної картки.
+
+    Площа знака в квадраті зі стороною 1 = d² · min(a, 1/a) · fill, де a — пропорції,
+    fill — частка непрозорих пікселів у межах знака (трикутник ~0.5, коло ~0.79,
+    прямокутник ~1). Підбираємо d так, щоб площа була однаковою для всіх: трикутник
+    і вузький стовпчик стають більшими, квадратна табличка — меншою.
+    """
+    info = cutout_manifest().get(sign_id)
+    if not info or not info.get("fill"):
+        return 0.8
+    aspect = info.get("aspect") or 1.0
+    ratio = min(aspect, 1 / aspect)
+    d = (SIGN_VISUAL_AREA / (ratio * info["fill"])) ** 0.5
+    return round(min(SIGN_SCALE_MAX, max(SIGN_SCALE_MIN, d)), 3)
 
 def get_path(rel_path: str) -> str:
     """Отримує абсолютний шлях до файлу"""
@@ -55,20 +90,18 @@ def load_signs_list() -> List[str]:
 
 def find_sign_image(sign_id: str) -> Optional[str]:
     """
-    Шукає файл картинки для знаку в папці data/images/
-    Підтримує формати .png та .jpg/.jpeg
+    Шукає картинку знаку: спершу вирізаний знак без фону (data/cutouts/*.webp,
+    готує tools/cutout.py), потім оригінал у data/images/.
     """
+    cutout = get_path(os.path.join("data", "cutouts", f"{sign_id}.webp"))
+    if os.path.exists(cutout):
+        return cutout
+
     image_dir = get_path("data/images")
-    
-    # Перевіряємо різні можливі розширення
-    extensions = [".png", ".PNG", ".jpg", ".JPG", ".jpeg", ".JPEG"]
-    
-    for ext in extensions:
+    for ext in (".png", ".PNG", ".jpg", ".JPG", ".jpeg", ".JPEG"):
         image_path = os.path.join(image_dir, f"{sign_id}{ext}")
         if os.path.exists(image_path):
             return image_path
-    
-    # Якщо файл не знайдено
     return None
 
 def validate_signs_integrity(signs_list: List[str]) -> List[str]:
@@ -104,11 +137,16 @@ def validate_signs_integrity(signs_list: List[str]) -> List[str]:
         
     return valid_signs
 
-def process_sign_image(image_path: str, theme: str = 'light') -> Optional[BytesIO]:
+def process_sign_image(image_path: str, theme: str = 'light',
+                       scale: Optional[float] = None) -> Optional[BytesIO]:
     """
     Обробляє зображення: розміщує його на білому (або темному) квадратному фоні.
+    scale — довша сторона знака як частка сторони квадрата (sign_scale);
+    за замовчуванням береться з маніфесту за назвою файлу.
     Повертає об'єкт BytesIO з готовим зображенням.
     """
+    if scale is None:
+        scale = sign_scale(os.path.splitext(os.path.basename(image_path))[0])
     try:
         with Image.open(image_path) as img:
             # Конвертуємо в RGBA для коректної обробки прозорості
@@ -120,22 +158,18 @@ def process_sign_image(image_path: str, theme: str = 'light') -> Optional[BytesI
 
             # Великі вихідні JPEG раніше давали квадрати >5000 px,
             # які Telegram відхиляв з PHOTO_INVALID_DIMENSIONS.
-            max_content_size = int(
-                MAX_SIGN_CANVAS_SIZE / (1 + 2 * IMAGE_PADDING_RATIO)
-            )
+            max_content_size = int(MAX_SIGN_CANVAS_SIZE * scale)
             if max_dim > max_content_size:
-                scale = max_content_size / max_dim
+                shrink = max_content_size / max_dim
                 resized = (
-                    max(1, round(w * scale)),
-                    max(1, round(h * scale)),
+                    max(1, round(w * shrink)),
+                    max(1, round(h * shrink)),
                 )
                 img = img.resize(resized, Image.Resampling.LANCZOS)
                 w, h = img.size
                 max_dim = max(w, h)
 
-            # Додаємо 5% відступу з кожного боку.
-            padding = max(1, int(max_dim * IMAGE_PADDING_RATIO))
-            canvas_size = max_dim + (padding * 2)
+            canvas_size = max(max_dim + 2, round(max_dim / scale))
 
             # Визначаємо колір фону залежно від теми
             if theme == 'dark':

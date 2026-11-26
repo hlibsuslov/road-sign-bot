@@ -93,6 +93,25 @@ export BOT_TOKEN=...    # і за потреби DB_PATH=road_signs_bot.db
 python -u bot.py
 ```
 
+## Бібліотека знаків
+
+- `data/images/` — оригінальна графіка знаків (CMYK/RGB JPEG, PNG), у Docker-образ не потрапляє.
+- `data/cutouts/` — знаки без фону (WebP з прозорістю, ≤1024 px) і `manifest.json`
+  (форма знака, метод вирізання). Бот бере картинки звідси.
+- `tools/cutout.py` — вирізає фон: заливка «чистого білого» від краю для трикутників,
+  кіл, ромбів і STOP; скруглення кутів за геометрією самого знака для прямокутних;
+  ручні винятки — `tools/cutout_overrides.json`. Перевірка — контактні аркуші
+  на світлому й темному фоні (`--sheet qa.png`). Залежності: `tools/requirements.txt`.
+- `tools/audit_data.py` — аудит бази (id, картинки, переклади, однакові назви,
+  довжина кнопок) → `docs/audit/data-audit.md`.
+- План розвитку: `docs/telegram-ui/plan.md`.
+
+```bash
+pip install -r tools/requirements.txt
+python tools/cutout.py --sheet qa.png      # перевирізати всі знаки
+python tools/audit_data.py --out docs/audit/data-audit.md
+```
+
 ## Перевірка
 
 Тести не використовують справжній Telegram-токен і не надсилають повідомлень:
@@ -100,3 +119,50 @@ python -u bot.py
 ```bash
 python -m unittest discover -s tests -v
 ```
+
+## Mini App
+
+`webapp/` — Mini App «Бібліотека знаків» (каталог, пошук, картка знака, прогрес) на
+UI-kit без залежностей; `miniapp_server.py` — HTTP API у процесі бота (aiohttp),
+`init_data.py` — перевірка `initData` підписом токена бота.
+
+| Змінна | Опис |
+|---|---|
+| `WEBAPP_PORT` | запускає сервер Mini App на цьому порту (без неї Mini App вимкнено) |
+| `WEBAPP_URL` | публічна HTTPS-адреса; бот ставить кнопку меню «Знаки» |
+| `PAYWALL_ENABLED` | `1` вмикає платний доступ; без неї все безкоштовно (безпечний деплой) |
+| `PREMIUM_STARS` | ціна підписки в Stars за 30 днів (типово `50`) |
+| `SUPPORT_CONTACT` | контакт для `/paysupport` (наприклад, `@username`) |
+| `CUSTOM_EMOJI` | `1` — увімкнути премиум-емодзі (потрібен Telegram Premium у власника бота) |
+| `PREMIUM_EMOJI_PACKS` | пакети через кому, з яких бот бере іконки (типово `tgmacicons,tgiosicons`) |
+
+Розділи Mini App: «Знаки» (бібліотека, вільний доступ), «Навчання» (той самий цикл
+Лейтнера, що й у чаті), «Тест» (10/20/45 питань, таймер, прохідний бал як на
+teoriprøven — 38 з 45, розбір помилок, результат надходить у чат), «Прогрес».
+«Навчання» і «Тест» — для Преміуму, коли `PAYWALL_ENABLED=1`.
+
+Оплата: підписка Telegram Stars (`createInvoiceLink` з `subscription_period`),
+`pre_checkout_query` перевіряє payload, валюту й суму на сервері, кожен платіж
+зберігається один раз за `telegram_payment_charge_id`, термін доступу — з
+`subscription_expiration_date`. Скасувати/відновити продовження — `/premium`.
+
+```bash
+node webapp/build.mjs        # TypeScript -> webapp/dist (Node >= 22.18, без пакетів)
+```
+
+## Карта бота і Studio (без токена)
+
+`bot-ui/` — карта екранів бота у форматі скилла telegram-bot-ui: імпорт із коду
+(`tgui.py map import --source . --into bot-ui`) плюс екрани, які
+`tools/bot_ui_screens.py` рендерить справжніми функціями бота на демо-учні
+(головна, картки навчання, квіз, теорія, статистика, Преміум, «Мої дані»).
+
+```bash
+py -3 tools/bot_ui_screens.py                       # оновити екрани з коду бота
+py -3 <skill>/scripts/tgui.py map validate --project bot-ui
+py -3 <skill>/scripts/tgui.py map export-snapshot --project bot-ui --output docs/telegram-ui/studio.html --format html
+py -3 <skill>/scripts/tgui.py map studio --project bot-ui   # Studio на 127.0.0.1
+```
+
+`studio.html` — офлайн-Studio в одному файлі: карта переходів, симулятор чату,
+екрани. Це симуляція: як саме відмалюють клієнти Telegram, перевіряється на тестовому боті.

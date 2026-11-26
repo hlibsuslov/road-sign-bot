@@ -4283,7 +4283,7 @@
         "ru": "Знаки сервиса",
         "uk": "Знаки сервісу"
       }
-  },
+    },
     "category_code": "serviceskilt",
     "descriptions": {
       "en": "The sign indicates a reception facility for toilet waste from caravans, motorhomes, and buses.",
@@ -6699,7 +6699,7 @@
       "uk": "Комбіноване регулювання"
     }
   },
-  "902_OH": {
+  "902_0H": {
     "category": {
       "code": "markeringsskilt",
       "names": {
@@ -6716,7 +6716,7 @@
       "ru": "Знак указывает на разметку для выделения области или объекта.",
       "uk": "Знак вказує на розмітку для виділення області або об'єкта."
     },
-    "id": "902_OH",
+    "id": "902_0H",
     "names": {
       "en": "Background Marking",
       "no": "Bakgrunnsmarkering",
@@ -6724,7 +6724,7 @@
       "uk": "Фонова розмітка"
     }
   },
-  "902_OV": {
+  "902_0V": {
     "category": {
       "code": "markeringsskilt",
       "names": {
@@ -6741,7 +6741,7 @@
       "ru": "Этот знак обозначает фон для улучшения видимости.",
       "uk": "Цей знак позначає фон для покращення видимості."
     },
-    "id": "902_OV",
+    "id": "902_0V",
     "names": {
       "en": "Background Marking",
       "no": "Bakgrunnsmarkering",
@@ -6749,7 +6749,7 @@
       "uk": "Фонова розмітка"
     }
   },
-  "904_OH": {
+  "904_0H": {
     "category": {
       "code": "markeringsskilt",
       "names": {
@@ -6766,7 +6766,7 @@
       "ru": "Этот знак указывает правильное направление движения для транспорта.",
       "uk": "Цей знак вказує правильний напрямок руху для транспорту."
     },
-    "id": "904_OH",
+    "id": "904_0H",
     "names": {
       "en": "Direction Marker",
       "no": "Retningsmarkering",
@@ -6774,7 +6774,7 @@
       "uk": "Вказівник напрямку"
     }
   },
-  "904_OV": {
+  "904_0V": {
     "category": {
       "code": "markeringsskilt",
       "names": {
@@ -6791,7 +6791,7 @@
       "ru": "Знак указывает правильное направление для избегания препятствий.",
       "uk": "Знак вказує правильний напрямок для уникнення перешкод."
     },
-    "id": "904_OV",
+    "id": "904_0V",
     "names": {
       "en": "Direction Marker",
       "no": "Retningsmarkering",
@@ -6799,7 +6799,7 @@
       "uk": "Вказівник напрямку"
     }
   },
-  "906_OH": {
+  "906_0H": {
     "category": {
       "code": "markeringsskilt",
       "names": {
@@ -6816,7 +6816,7 @@
       "ru": "Обозначает препятствие на дороге, которое нужно объехать.",
       "uk": "Позначає перешкоду на дорозі, яку потрібно об'їхати."
     },
-    "id": "906_OH",
+    "id": "906_0H",
     "names": {
       "en": "Obstacle Marker",
       "no": "Hindermarkering",
@@ -6824,7 +6824,7 @@
       "uk": "Маркер перешкоди"
     }
   },
-  "906_OV": {
+  "906_0V": {
     "category": {
       "code": "markeringsskilt",
       "names": {
@@ -6841,7 +6841,7 @@
       "ru": "Знак обозначает препятствие на дороге.",
       "uk": "Знак позначає перешкоду на дорозі."
     },
-    "id": "906_OV",
+    "id": "906_0V",
     "names": {
       "en": "Obstacle Marker",
       "no": "Hindermarkering",
@@ -6849,7 +6849,7 @@
       "uk": "Маркер перешкоди"
     }
   },
-  "906_OVH": {
+  "906_0VH": {
     "category": {
       "code": "markeringsskilt",
       "names": {
@@ -6866,7 +6866,7 @@
       "ru": "Знак указывает на препятствие на дороге.",
       "uk": "Знак вказує на перешкоду на дорозі."
     },
-    "id": "906_OVH",
+    "id": "906_0VH",
     "names": {
       "en": "Obstacle Marker",
       "no": "Hindermarkering",

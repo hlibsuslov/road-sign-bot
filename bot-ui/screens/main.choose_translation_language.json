@@ -1,0 +1,18 @@
+{
+  "id": "main.choose_translation_language",
+  "title": "✅ Налаштування збережено",
+  "kind": "result",
+  "audience": "private",
+  "notes": "imported from bot.py:642",
+  "message": {
+    "id": "main",
+    "format": "regular.html",
+    "text": {
+      "uk": "✅ <b>Налаштування збережено</b>\n\n{h}\nУ базі: {len} знаків."
+    }
+  },
+  "keyboard": {
+    "type": "inline",
+    "rows": []
+  }
+}

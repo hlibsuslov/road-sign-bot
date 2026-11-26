@@ -1,0 +1,18 @@
+{
+  "id": "main.study_language_prompt",
+  "title": "Оберіть мову кнопкою нижче.",
+  "kind": "result",
+  "audience": "private",
+  "notes": "imported from bot.py:1250",
+  "message": {
+    "id": "main",
+    "format": "regular.plain",
+    "text": {
+      "uk": "Оберіть мову кнопкою нижче."
+    }
+  },
+  "keyboard": {
+    "type": "inline",
+    "rows": []
+  }
+}

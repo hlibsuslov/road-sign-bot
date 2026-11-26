@@ -1,0 +1,40 @@
+{
+  "id": "main.quiz_answer_handler.alt1",
+  "title": "quiz_answer_handler (branch)",
+  "kind": "menu",
+  "audience": "private",
+  "notes": "imported from bot.py:762",
+  "message": {
+    "id": "main",
+    "format": "regular.html",
+    "text": {
+      "uk": "‹message text›"
+    }
+  },
+  "keyboard": {
+    "type": "inline",
+    "rows": [
+      [
+        "dali",
+        "poysnenny"
+      ]
+    ]
+  },
+  "actions": {
+    "dali": {
+      "label": {
+        "uk": "Далі"
+      },
+      "type": "navigate",
+      "to": "studio.study.intro",
+      "style": "primary",
+      "callbackData": "study_next"
+    },
+    "poysnenny": {
+      "label": {
+        "uk": "Пояснення"
+      },
+      "type": "disabled"
+    }
+  }
+}

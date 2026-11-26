@@ -1,0 +1,18 @@
+{
+  "id": "main.translation_language_prompt",
+  "title": "Оберіть мову перекладу кнопкою нижче.",
+  "kind": "result",
+  "audience": "private",
+  "notes": "imported from bot.py:1262",
+  "message": {
+    "id": "main",
+    "format": "regular.plain",
+    "text": {
+      "uk": "Оберіть мову перекладу кнопкою нижче."
+    }
+  },
+  "keyboard": {
+    "type": "inline",
+    "rows": []
+  }
+}

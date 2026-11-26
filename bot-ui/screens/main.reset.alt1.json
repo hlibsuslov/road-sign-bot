@@ -1,0 +1,47 @@
+{
+  "id": "main.reset.alt1",
+  "title": "cmd_reset (branch)",
+  "kind": "menu",
+  "audience": "private",
+  "notes": "imported from bot.py:1101",
+  "message": {
+    "id": "main",
+    "format": "regular.html",
+    "text": {
+      "uk": "‹message text›"
+    }
+  },
+  "keyboard": {
+    "type": "inline",
+    "rows": [
+      [
+        "skinuti_ves_progres"
+      ],
+      [
+        "zalisiti_progres"
+      ]
+    ]
+  },
+  "actions": {
+    "skinuti_ves_progres": {
+      "label": {
+        "uk": "Скинути весь прогрес"
+      },
+      "type": "navigate",
+      "to": "main.reset_confirm_handler",
+      "presentation": "edit",
+      "style": "danger",
+      "callbackData": "reset_confirm"
+    },
+    "zalisiti_progres": {
+      "label": {
+        "uk": "← Залишити прогрес"
+      },
+      "type": "answer",
+      "text": {
+        "uk": "Спочатку /start"
+      },
+      "callbackData": "settings_back"
+    }
+  }
+}

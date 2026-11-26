@@ -1,0 +1,34 @@
+{
+  "id": "studio.study.more",
+  "title": "Пояснення знака",
+  "kind": "result",
+  "audience": "private",
+  "notes": "rendered by tools/bot_ui_screens.py from the bot's own functions",
+  "message": {
+    "id": "main",
+    "format": "regular.html",
+    "text": {
+      "uk": "ℹ️ <b>Innkjøring forbudt</b>\n\nSkiltet Innkjøring forbudt tilhører kategorien forbudsskilt og betyr at det ikke er tillatt å kjøre inn på den aktuelle veien. Dette kan være på grunn av trafikkreguleringer, sikkerhetshensyn eller andre årsaker. Det er viktig å respektere dette skiltet for å unngå farlige situasjoner og sikre en trygg trafikkflyt.\n\n<i>Знак В'їзд заборонено належить до категорії заборонних знаків і означає, що в'їзд на зазначену дорогу заборонено. Це може бути через регулювання руху, міркування безпеки або інші причини. Важливо дотримуватися цього знака, щоб уникнути небезпечних ситуацій і забезпечити безпечний рух.</i>"
+    }
+  },
+  "keyboard": {
+    "type": "inline",
+    "rows": [
+      [
+        "b00"
+      ]
+    ]
+  },
+  "actions": {
+    "b00": {
+      "label": {
+        "uk": "🎓 Продовжити навчання"
+      },
+      "type": "navigate",
+      "to": "studio.study.intro",
+      "presentation": "edit",
+      "style": "primary",
+      "callbackData": "study_next"
+    }
+  }
+}

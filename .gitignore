@@ -24,3 +24,11 @@ deploy.sh
 deploy.log
 deploy.log.tmp
 *.db.bak*
+
+# Mini App build output (Dockerfile builds it)
+webapp/dist/
+
+# bot-ui: generated files (rebuild: py -3 tools/bot_ui_screens.py, tgui map export-snapshot)
+bot-ui/.bot-ui/
+bot-ui/.patches/
+docs/telegram-ui/studio.html

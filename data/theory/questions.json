@@ -1,0 +1,253 @@
+{
+  "version": 1,
+  "note": "Starter bank. Every question keeps needs_review=true until checked against the current trafikkreglene / Statens vegvesen material. Scenes are rendered from data (webapp/scene.ts), so new situations need no new pictures.",
+  "questions": [
+    {
+      "id": "vik-001", "topic": "vikeplikt", "classes": ["B", "AM146", "A1", "A2", "A"], "type": "single", "difficulty": 1,
+      "image": {"scene": "crossroad", "you": {"from": "S", "to": "N"}, "actors": [{"kind": "car", "from": "E", "to": "W"}]},
+      "text": {"no": "Krysset har ingen skilt eller lys. Hvem skal kjøre først?", "en": "The junction has no signs or lights. Who goes first?", "uk": "На перехресті немає знаків і світлофора. Хто їде першим?", "ru": "На перекрёстке нет знаков и светофора. Кто едет первым?"},
+      "options": [
+        {"id": "a", "text": {"no": "Bilen fra høyre — du har vikeplikt", "en": "The car from the right — you must give way", "uk": "Авто справа — ви поступаєтеся", "ru": "Машина справа — вы уступаете"}},
+        {"id": "b", "text": {"no": "Du, fordi du kjører rett fram", "en": "You, because you are going straight on", "uk": "Ви, бо їдете прямо", "ru": "Вы, потому что едете прямо"}},
+        {"id": "c", "text": {"no": "Den som kom først til krysset", "en": "Whoever reached the junction first", "uk": "Той, хто першим під'їхав", "ru": "Тот, кто подъехал первым"}}
+      ],
+      "correct": ["a"],
+      "explanation": {"no": "Høyreregelen: uten skilt eller lys har du vikeplikt for kjørende som kommer fra høyre.", "en": "The right-hand rule: with no signs or lights you give way to traffic coming from your right.", "uk": "Правило правої руки: без знаків і світлофора ви поступаєтеся тим, хто під'їжджає справа.", "ru": "Правило правой руки: без знаков и светофора вы уступаете тем, кто подъезжает справа."},
+      "source": "Trafikkreglene § 7 (høyreregelen)", "needs_review": true
+    },
+    {
+      "id": "vik-002", "topic": "vikeplikt", "classes": ["B", "AM146", "A1", "A2", "A"], "type": "single", "difficulty": 1,
+      "image": {"scene": "roundabout", "you": {"from": "S", "to": "E"}, "actors": [{"kind": "car", "from": "W", "to": "N", "inside": true}], "signs": [{"id": "202_0", "arm": "S"}]},
+      "text": {"no": "Du skal inn i rundkjøringen. En bil kjører allerede i den. Hva gjør du?", "en": "You are entering the roundabout. A car is already in it. What do you do?", "uk": "Ви в'їжджаєте на кільце, де вже їде авто. Що робите?", "ru": "Вы въезжаете на кольцо, где уже едет машина. Что делаете?"},
+      "options": [
+        {"id": "a", "text": {"no": "Venter til bilen i rundkjøringen har passert", "en": "Wait until the car in the roundabout has passed", "uk": "Чекаю, поки авто на кільці проїде", "ru": "Жду, пока машина на кольце проедет"}},
+        {"id": "b", "text": {"no": "Kjører inn — biler fra høyre må vike", "en": "Drive in — cars from the right must give way", "uk": "В'їжджаю — авто справа мають поступитися", "ru": "Въезжаю — машины справа должны уступить"}},
+        {"id": "c", "text": {"no": "Blinker til venstre og kjører inn", "en": "Signal left and drive in", "uk": "Вмикаю лівий поворот і в'їжджаю", "ru": "Включаю левый поворот и въезжаю"}}
+      ],
+      "correct": ["a"],
+      "explanation": {"no": "Skiltet «Vikeplikt» ved innkjøringen betyr at du må vike for trafikken som allerede er i rundkjøringen.", "en": "The give-way sign at the entry means you yield to traffic already in the roundabout.", "uk": "Знак «Дати дорогу» на в'їзді означає, що ви поступаєтеся тим, хто вже на кільці.", "ru": "Знак «Уступите дорогу» на въезде означает, что вы уступаете тем, кто уже на кольце."},
+      "source": "Skiltforskriften, skilt 202 Vikeplikt", "needs_review": true
+    },
+    {
+      "id": "vik-003", "topic": "vikeplikt", "classes": ["B", "AM146", "A1", "A2", "A"], "type": "single", "difficulty": 1,
+      "image": {"scene": "road", "you": {"from": "S", "to": "N"}, "crossing": true, "pedestrians": [{"side": "E", "walking": true}]},
+      "text": {"no": "En fotgjenger skal til å gå ut i gangfeltet. Hva gjør du?", "en": "A pedestrian is about to step onto the crossing. What do you do?", "uk": "Пішохід збирається вийти на перехід. Що робите?", "ru": "Пешеход собирается выйти на переход. Что делаете?"},
+      "options": [
+        {"id": "a", "text": {"no": "Stanser og lar fotgjengeren gå over", "en": "Stop and let the pedestrian cross", "uk": "Зупиняюсь і пропускаю пішохода", "ru": "Останавливаюсь и пропускаю пешехода"}},
+        {"id": "b", "text": {"no": "Kjører videre — hun står ennå på fortauet", "en": "Keep going — she is still on the pavement", "uk": "Їду далі — вона ще на тротуарі", "ru": "Еду дальше — она ещё на тротуаре"}},
+        {"id": "c", "text": {"no": "Tuter for å varsle henne", "en": "Sound the horn to warn her", "uk": "Сигналю, щоб попередити", "ru": "Сигналю, чтобы предупредить"}}
+      ],
+      "correct": ["a"],
+      "explanation": {"no": "Du har vikeplikt for gående som er ute i gangfeltet eller er på vei ut i det.", "en": "You must give way to pedestrians who are on the crossing or about to step onto it.", "uk": "Ви зобов'язані пропустити пішоходів на переході й тих, хто от-от на нього вийде.", "ru": "Вы обязаны пропустить пешеходов на переходе и тех, кто вот-вот на него выйдет."},
+      "source": "Trafikkreglene § 9 (gangfelt)", "needs_review": true
+    },
+    {
+      "id": "vik-004", "topic": "vikeplikt", "classes": ["B", "AM146", "A1", "A2", "A"], "type": "single", "difficulty": 2,
+      "image": null,
+      "text": {"no": "En ambulanse med blålys og sirene kommer bakfra. Hva gjør du?", "en": "An ambulance with blue lights and siren is coming from behind. What do you do?", "uk": "Ззаду їде швидка з маячками і сиреною. Що робите?", "ru": "Сзади едет скорая с мигалками и сиреной. Что делаете?"},
+      "options": [
+        {"id": "a", "text": {"no": "Gir fri vei: kjører til side og stanser om nødvendig", "en": "Clear the way: move aside and stop if needed", "uk": "Звільняю дорогу: зміщуюсь убік і за потреби зупиняюсь", "ru": "Освобождаю дорогу: смещаюсь в сторону и при необходимости останавливаюсь"}},
+        {"id": "b", "text": {"no": "Stanser brått midt i kjørefeltet", "en": "Stop suddenly in the middle of the lane", "uk": "Різко зупиняюсь посеред смуги", "ru": "Резко останавливаюсь посреди полосы"}},
+        {"id": "c", "text": {"no": "Øker farten for å komme unna", "en": "Speed up to get out of the way", "uk": "Пришвидшуюсь, щоб не заважати", "ru": "Ускоряюсь, чтобы не мешать"}}
+      ],
+      "correct": ["a"],
+      "explanation": {"no": "Utrykningskjøretøy med blålys og lydsignal skal få fri vei. Flytt deg rolig til siden uten å skape fare.", "en": "Emergency vehicles with blue lights and siren must be given a clear way. Move aside calmly without creating danger.", "uk": "Спецтранспорту з маячками і сиреною треба звільнити дорогу. Зміщуйтесь спокійно, не створюючи небезпеки.", "ru": "Спецтранспорту с мигалками и сиреной нужно освободить дорогу. Смещайтесь спокойно, не создавая опасности."},
+      "source": "Trafikkreglene (utrykningskjøretøy)", "needs_review": true
+    },
+    {
+      "id": "fart-001", "topic": "fart", "classes": ["B", "A1", "A2", "A"], "type": "single", "difficulty": 1,
+      "image": null,
+      "text": {"no": "Hva er fartsgrensen i tettbygd strøk når ingen skilt viser noe annet?", "en": "What is the speed limit in a built-up area when no sign says otherwise?", "uk": "Яке обмеження швидкості в населеному пункті, якщо знаки не кажуть інакше?", "ru": "Какое ограничение скорости в населённом пункте, если знаки не говорят иначе?"},
+      "options": [
+        {"id": "a", "text": {"no": "50 km/t", "en": "50 km/h", "uk": "50 км/год", "ru": "50 км/ч"}},
+        {"id": "b", "text": {"no": "30 km/t", "en": "30 km/h", "uk": "30 км/год", "ru": "30 км/ч"}},
+        {"id": "c", "text": {"no": "60 km/t", "en": "60 km/h", "uk": "60 км/год", "ru": "60 км/ч"}}
+      ],
+      "correct": ["a"],
+      "explanation": {"no": "Den generelle fartsgrensen er 50 km/t i tettbygd strøk og 80 km/t utenfor.", "en": "The general limit is 50 km/h in built-up areas and 80 km/h elsewhere.", "uk": "Загальне обмеження — 50 км/год у населених пунктах і 80 км/год поза ними.", "ru": "Общее ограничение — 50 км/ч в населённых пунктах и 80 км/ч вне их."},
+      "source": "Trafikkreglene § 13 (fartsgrenser)", "needs_review": true
+    },
+    {
+      "id": "fart-002", "topic": "fart", "classes": ["B", "A1", "A2", "A"], "type": "single", "difficulty": 1,
+      "image": null,
+      "text": {"no": "Hva er den generelle fartsgrensen utenfor tettbygd strøk?", "en": "What is the general speed limit outside built-up areas?", "uk": "Яке загальне обмеження швидкості поза населеними пунктами?", "ru": "Какое общее ограничение скорости вне населённых пунктов?"},
+      "options": [
+        {"id": "a", "text": {"no": "80 km/t", "en": "80 km/h", "uk": "80 км/год", "ru": "80 км/ч"}},
+        {"id": "b", "text": {"no": "90 km/t", "en": "90 km/h", "uk": "90 км/год", "ru": "90 км/ч"}},
+        {"id": "c", "text": {"no": "70 km/t", "en": "70 km/h", "uk": "70 км/год", "ru": "70 км/ч"}}
+      ],
+      "correct": ["a"],
+      "explanation": {"no": "Uten skilt gjelder 80 km/t utenfor tettbygd strøk. Høyere grenser må være skiltet.", "en": "Without signs, 80 km/h applies outside built-up areas. Higher limits are always signed.", "uk": "Без знаків поза населеними пунктами діє 80 км/год. Вищі обмеження завжди позначені знаками.", "ru": "Без знаков вне населённых пунктов действует 80 км/ч. Более высокие ограничения всегда обозначены знаками."},
+      "source": "Trafikkreglene § 13 (fartsgrenser)", "needs_review": true
+    },
+    {
+      "id": "fart-003", "topic": "fart", "classes": ["B", "AM146", "A1", "A2", "A"], "type": "single", "difficulty": 2,
+      "image": null,
+      "text": {"no": "Du dobler farten. Hva skjer omtrent med bremselengden?", "en": "You double your speed. Roughly what happens to the braking distance?", "uk": "Ви подвоїли швидкість. Що приблизно стається з гальмівним шляхом?", "ru": "Вы удвоили скорость. Что примерно происходит с тормозным путём?"},
+      "options": [
+        {"id": "a", "text": {"no": "Den blir fire ganger så lang", "en": "It becomes four times as long", "uk": "Збільшується вчетверо", "ru": "Увеличивается в четыре раза"}},
+        {"id": "b", "text": {"no": "Den blir dobbelt så lang", "en": "It doubles", "uk": "Подвоюється", "ru": "Удваивается"}},
+        {"id": "c", "text": {"no": "Den endrer seg ikke", "en": "It does not change", "uk": "Не змінюється", "ru": "Не меняется"}}
+      ],
+      "correct": ["a"],
+      "explanation": {"no": "Bremselengden øker med kvadratet av farten: dobbel fart gir omtrent fire ganger så lang bremselengde.", "en": "Braking distance grows with the square of speed: double speed, about four times the distance.", "uk": "Гальмівний шлях зростає пропорційно квадрату швидкості: удвічі швидше — приблизно вчетверо довше.", "ru": "Тормозной путь растёт пропорционально квадрату скорости: вдвое быстрее — примерно вчетверо длиннее."},
+      "source": "Fysikk: bremselengde ∝ v²", "needs_review": true
+    },
+    {
+      "id": "fart-004", "topic": "fart", "classes": ["B", "AM146", "A1", "A2", "A"], "type": "multi", "difficulty": 2,
+      "image": null,
+      "text": {"no": "Hva består stopplengden av? Velg alle riktige.", "en": "What makes up the stopping distance? Choose all that apply.", "uk": "З чого складається зупинний шлях? Оберіть усі правильні.", "ru": "Из чего складывается остановочный путь? Выберите все верные."},
+      "options": [
+        {"id": "a", "text": {"no": "Reaksjonslengde", "en": "Reaction distance", "uk": "Шлях реакції", "ru": "Путь реакции"}},
+        {"id": "b", "text": {"no": "Bremselengde", "en": "Braking distance", "uk": "Гальмівний шлях", "ru": "Тормозной путь"}},
+        {"id": "c", "text": {"no": "Akselerasjonslengde", "en": "Acceleration distance", "uk": "Шлях розгону", "ru": "Путь разгона"}}
+      ],
+      "correct": ["a", "b"],
+      "explanation": {"no": "Stopplengde = reaksjonslengde (før du bremser) + bremselengde (mens bilen bremser).", "en": "Stopping distance = reaction distance (before braking) + braking distance (while braking).", "uk": "Зупинний шлях = шлях реакції (до гальмування) + гальмівний шлях (під час гальмування).", "ru": "Остановочный путь = путь реакции (до торможения) + тормозной путь (во время торможения)."},
+      "source": "Læreplan: fart og stopplengde", "needs_review": true
+    },
+    {
+      "id": "park-001", "topic": "parkering", "classes": ["B", "AM146", "A1", "A2", "A"], "type": "single", "difficulty": 1,
+      "image": {"scene": "road", "you": {"from": "S", "to": "N", "parked": true}, "crossing": true},
+      "text": {"no": "Hvor nær gangfeltet kan du tidligst stanse foran det?", "en": "How close to a pedestrian crossing may you stop in front of it?", "uk": "На якій найменшій відстані перед переходом можна зупинитися?", "ru": "На каком наименьшем расстоянии перед переходом можно остановиться?"},
+      "options": [
+        {"id": "a", "text": {"no": "5 meter", "en": "5 metres", "uk": "5 метрів", "ru": "5 метров"}},
+        {"id": "b", "text": {"no": "2 meter", "en": "2 metres", "uk": "2 метри", "ru": "2 метра"}},
+        {"id": "c", "text": {"no": "Rett ved stripene", "en": "Right at the stripes", "uk": "Одразу біля смуг", "ru": "Сразу у полос"}}
+      ],
+      "correct": ["a"],
+      "explanation": {"no": "Det er forbudt å stanse i gangfelt og nærmere enn 5 meter foran det, så du ikke skjuler fotgjengere.", "en": "Stopping on a crossing or within 5 metres before it is forbidden, so you don't hide pedestrians.", "uk": "Зупинятися на переході й ближче ніж за 5 м перед ним заборонено, щоб не закривати пішоходів.", "ru": "Останавливаться на переходе и ближе 5 м перед ним запрещено, чтобы не закрывать пешеходов."},
+      "source": "Trafikkreglene § 17 (stans og parkering)", "needs_review": true
+    },
+    {
+      "id": "menn-001", "topic": "mennesket", "classes": ["B", "AM146", "A1", "A2", "A"], "type": "single", "difficulty": 1,
+      "image": null,
+      "text": {"no": "Hva er promillegrensen for å kjøre bil i Norge?", "en": "What is the blood alcohol limit for driving in Norway?", "uk": "Яка допустима межа алкоголю в крові для водія в Норвегії?", "ru": "Какой допустимый предел алкоголя в крови для водителя в Норвегии?"},
+      "options": [
+        {"id": "a", "text": {"no": "0,2 promille", "en": "0.2 per mille", "uk": "0,2 проміле", "ru": "0,2 промилле"}},
+        {"id": "b", "text": {"no": "0,5 promille", "en": "0.5 per mille", "uk": "0,5 проміле", "ru": "0,5 промилле"}},
+        {"id": "c", "text": {"no": "0,8 promille", "en": "0.8 per mille", "uk": "0,8 проміле", "ru": "0,8 промилле"}}
+      ],
+      "correct": ["a"],
+      "explanation": {"no": "Grensen er 0,2 promille. Den tryggeste regelen: ikke drikk alkohol når du skal kjøre.", "en": "The limit is 0.2 per mille. The safe rule: don't drink at all when you will drive.", "uk": "Межа — 0,2 проміле. Найбезпечніше правило: не пити взагалі, якщо сідаєте за кермо.", "ru": "Предел — 0,2 промилле. Самое безопасное правило: не пить вообще, если садитесь за руль."},
+      "source": "Vegtrafikkloven § 22", "needs_review": true
+    },
+    {
+      "id": "menn-002", "topic": "mennesket", "classes": ["B", "AM146", "A1", "A2", "A"], "type": "single", "difficulty": 1,
+      "image": null,
+      "text": {"no": "Du blir trøtt mens du kjører. Hva hjelper best?", "en": "You get sleepy while driving. What helps best?", "uk": "Під час їзди вас хилить у сон. Що допоможе найкраще?", "ru": "Во время езды вас клонит в сон. Что поможет лучше всего?"},
+      "options": [
+        {"id": "a", "text": {"no": "Stanse på et trygt sted og hvile eller sove", "en": "Stop somewhere safe and rest or sleep", "uk": "Зупинитися в безпечному місці й відпочити чи поспати", "ru": "Остановиться в безопасном месте и отдохнуть или поспать"}},
+        {"id": "b", "text": {"no": "Åpne vinduet og skru opp musikken", "en": "Open the window and turn up the music", "uk": "Відчинити вікно й гучніше ввімкнути музику", "ru": "Открыть окно и сделать музыку громче"}},
+        {"id": "c", "text": {"no": "Kjøre litt fortere for å komme fram", "en": "Drive a bit faster to arrive sooner", "uk": "Їхати трохи швидше, щоб швидше доїхати", "ru": "Ехать чуть быстрее, чтобы быстрее доехать"}}
+      ],
+      "correct": ["a"],
+      "explanation": {"no": "Bare hvile og søvn fjerner trøtthet. Frisk luft og musikk hjelper bare i noen minutter.", "en": "Only rest and sleep remove fatigue. Fresh air and music help for a few minutes at most.", "uk": "Втому прибирає лише відпочинок і сон. Свіже повітря й музика діють кілька хвилин.", "ru": "Усталость снимают только отдых и сон. Свежий воздух и музыка действуют несколько минут."},
+      "source": "Læreplan: mennesket i trafikken", "needs_review": true
+    },
+    {
+      "id": "kjt-001", "topic": "kjoretoy", "classes": ["B", "AM146", "A1", "A2", "A"], "type": "single", "difficulty": 1,
+      "image": null,
+      "text": {"no": "Når må du ha lys på under kjøring i Norge?", "en": "When must your lights be on while driving in Norway?", "uk": "Коли в Норвегії під час руху мають бути ввімкнені фари?", "ru": "Когда в Норвегии во время движения должны быть включены фары?"},
+      "options": [
+        {"id": "a", "text": {"no": "Alltid, også om dagen", "en": "Always, also in daylight", "uk": "Завжди, і вдень теж", "ru": "Всегда, и днём тоже"}},
+        {"id": "b", "text": {"no": "Bare i mørket", "en": "Only in the dark", "uk": "Лише в темряві", "ru": "Только в темноте"}},
+        {"id": "c", "text": {"no": "Bare om vinteren", "en": "Only in winter", "uk": "Лише взимку", "ru": "Только зимой"}}
+      ],
+      "correct": ["a"],
+      "explanation": {"no": "I Norge skal motorvogn alltid kjøre med lys (nærlys eller kjørelys), også i dagslys.", "en": "In Norway motor vehicles always drive with lights on (dipped or daytime running lights).", "uk": "У Норвегії транспорт завжди їде з увімкненим світлом (ближнє або денні вогні).", "ru": "В Норвегии транспорт всегда едет с включённым светом (ближний или дневные огни)."},
+      "source": "Trafikkreglene (bruk av lys)", "needs_review": true
+    },
+    {
+      "id": "kjt-002", "topic": "kjoretoy", "classes": ["B"], "type": "single", "difficulty": 1,
+      "image": null,
+      "text": {"no": "Hvem har ansvaret for at passasjerer under 15 år bruker bilbelte eller barnesete?", "en": "Who is responsible for passengers under 15 using a seat belt or child seat?", "uk": "Хто відповідає за те, щоб пасажири до 15 років були пристебнуті чи в автокріслі?", "ru": "Кто отвечает за то, чтобы пассажиры до 15 лет были пристёгнуты или в автокресле?"},
+      "options": [
+        {"id": "a", "text": {"no": "Føreren", "en": "The driver", "uk": "Водій", "ru": "Водитель"}},
+        {"id": "b", "text": {"no": "Foreldrene, også om de ikke er med", "en": "The parents, even if they are not in the car", "uk": "Батьки, навіть якщо їх немає в авто", "ru": "Родители, даже если их нет в машине"}},
+        {"id": "c", "text": {"no": "Passasjeren selv", "en": "The passenger", "uk": "Сам пасажир", "ru": "Сам пассажир"}}
+      ],
+      "correct": ["a"],
+      "explanation": {"no": "Føreren skal sørge for at passasjerer under 15 år er sikret med belte eller barnesikring.", "en": "The driver must make sure passengers under 15 are secured with a belt or child restraint.", "uk": "Водій має подбати, щоб пасажири до 15 років були пристебнуті або в дитячому кріслі.", "ru": "Водитель обязан проследить, чтобы пассажиры до 15 лет были пристёгнуты или в детском кресле."},
+      "source": "Forskrift om bruk av kjøretøy (sikring)", "needs_review": true
+    },
+    {
+      "id": "kjt-003", "topic": "kjoretoy", "classes": ["B"], "type": "single", "difficulty": 2,
+      "image": {"scene": "road", "you": {"from": "S", "to": "N", "broken": true}, "triangle": true},
+      "text": {"no": "Bilen stopper på et farlig sted i vegen. Hva gjør du først?", "en": "Your car breaks down in a dangerous spot on the road. What do you do first?", "uk": "Авто зупинилося в небезпечному місці на дорозі. Що робите насамперед?", "ru": "Машина заглохла в опасном месте на дороге. Что делаете в первую очередь?"},
+      "options": [
+        {"id": "a", "text": {"no": "Slår på nødblinken, tar på refleksvest og setter ut varseltrekant", "en": "Turn on hazard lights, put on a reflective vest, place the warning triangle", "uk": "Вмикаю аварійку, вдягаю світловідбивний жилет, ставлю знак аварійної зупинки", "ru": "Включаю аварийку, надеваю светоотражающий жилет, ставлю знак аварийной остановки"}},
+        {"id": "b", "text": {"no": "Prøver å starte bilen igjen og igjen", "en": "Keep trying to restart the car", "uk": "Раз за разом пробую завести авто", "ru": "Раз за разом пытаюсь завести машину"}},
+        {"id": "c", "text": {"no": "Venter i bilen til noen stopper", "en": "Wait in the car until someone stops", "uk": "Чекаю в авто, поки хтось зупиниться", "ru": "Жду в машине, пока кто-то остановится"}}
+      ],
+      "correct": ["a"],
+      "explanation": {"no": "Varsle andre trafikanter først: nødblink og varseltrekant godt bak bilen. Vær synlig når du går ut.", "en": "Warn other road users first: hazard lights and a warning triangle well behind the car. Be visible when you step out.", "uk": "Спершу попередьте інших: аварійна сигналізація і знак далеко позаду авто. Будьте помітні, коли виходите.", "ru": "Сначала предупредите других: аварийка и знак далеко позади машины. Будьте заметны, когда выходите."},
+      "source": "Læreplan: sikring av stanset kjøretøy", "needs_review": true
+    },
+    {
+      "id": "vin-001", "topic": "vinter", "classes": ["B"], "type": "single", "difficulty": 2,
+      "image": null,
+      "text": {"no": "Hvor dypt må mønsteret på vinterdekk minst være i vintersesongen (bil under 3,5 tonn)?", "en": "What is the minimum tread depth for winter tyres in the winter season (car under 3.5 t)?", "uk": "Яка мінімальна глибина протектора зимових шин у зимовий сезон (авто до 3,5 т)?", "ru": "Какая минимальная глубина протектора зимних шин в зимний сезон (авто до 3,5 т)?"},
+      "options": [
+        {"id": "a", "text": {"no": "3 mm", "en": "3 mm", "uk": "3 мм", "ru": "3 мм"}},
+        {"id": "b", "text": {"no": "1,6 mm", "en": "1.6 mm", "uk": "1,6 мм", "ru": "1,6 мм"}},
+        {"id": "c", "text": {"no": "5 mm", "en": "5 mm", "uk": "5 мм", "ru": "5 мм"}}
+      ],
+      "correct": ["a"],
+      "explanation": {"no": "I vintersesongen kreves minst 3 mm mønsterdybde; 1,6 mm gjelder sommerdekk.", "en": "In the winter season at least 3 mm is required; 1.6 mm applies to summer tyres.", "uk": "Узимку потрібно щонайменше 3 мм; 1,6 мм — це вимога до літніх шин.", "ru": "Зимой требуется не меньше 3 мм; 1,6 мм — требование к летним шинам."},
+      "source": "Forskrift om bruk av kjøretøy (dekk)", "needs_review": true
+    },
+    {
+      "id": "ulk-001", "topic": "ulykker", "classes": ["B", "AM146", "A1", "A2", "A"], "type": "single", "difficulty": 1,
+      "image": null,
+      "text": {"no": "Hvilket nummer ringer du for ambulanse i Norge?", "en": "Which number do you call for an ambulance in Norway?", "uk": "За яким номером викликати швидку в Норвегії?", "ru": "По какому номеру вызывать скорую в Норвегии?"},
+      "options": [
+        {"id": "a", "text": {"no": "113", "en": "113", "uk": "113", "ru": "113"}},
+        {"id": "b", "text": {"no": "112", "en": "112", "uk": "112", "ru": "112"}},
+        {"id": "c", "text": {"no": "110", "en": "110", "uk": "110", "ru": "110"}}
+      ],
+      "correct": ["a"],
+      "explanation": {"no": "113 er ambulanse (medisinsk nødhjelp), 112 er politi og 110 er brann.", "en": "113 is ambulance (medical emergency), 112 police, 110 fire.", "uk": "113 — швидка, 112 — поліція, 110 — пожежна.", "ru": "113 — скорая, 112 — полиция, 110 — пожарная."},
+      "source": "Nødnummer i Norge", "needs_review": true
+    },
+    {
+      "id": "ulk-002", "topic": "ulykker", "classes": ["B", "AM146", "A1", "A2", "A"], "type": "single", "difficulty": 2,
+      "image": null,
+      "text": {"no": "Du kommer først til en trafikkulykke. Hva gjør du først?", "en": "You are first at a traffic accident. What do you do first?", "uk": "Ви першим опинилися на місці ДТП. Що робите насамперед?", "ru": "Вы первым оказались на месте ДТП. Что делаете в первую очередь?"},
+      "options": [
+        {"id": "a", "text": {"no": "Sikrer ulykkesstedet så det ikke skjer flere ulykker", "en": "Secure the scene so no further accidents happen", "uk": "Убезпечую місце, щоб не сталося нових аварій", "ru": "Обезопасиваю место, чтобы не случилось новых аварий"}},
+        {"id": "b", "text": {"no": "Flytter alle skadde ut av bilene", "en": "Move all injured people out of the cars", "uk": "Витягую всіх постраждалих з авто", "ru": "Вытаскиваю всех пострадавших из машин"}},
+        {"id": "c", "text": {"no": "Tar bilder til forsikringen", "en": "Take photos for the insurance", "uk": "Фотографую для страховки", "ru": "Фотографирую для страховки"}}
+      ],
+      "correct": ["a"],
+      "explanation": {"no": "Rekkefølgen er: sikre stedet, varsle (113) og gi førstehjelp. Flytt bare skadde som er i umiddelbar fare.", "en": "The order is: secure the scene, call 113, give first aid. Move injured people only if they are in immediate danger.", "uk": "Порядок: убезпечити місце, викликати 113, надати першу допомогу. Переміщуйте постраждалих лише при безпосередній загрозі.", "ru": "Порядок: обезопасить место, вызвать 113, оказать первую помощь. Перемещайте пострадавших только при непосредственной угрозе."},
+      "source": "Læreplan: ulykker og førstehjelp", "needs_review": true
+    },
+    {
+      "id": "tohjul-001", "topic": "tohjul", "classes": ["AM146"], "type": "single", "difficulty": 1,
+      "image": null,
+      "text": {"no": "Hvor fort kan en moped (klasse AM146) maksimalt være konstruert for å kjøre?", "en": "What is the maximum design speed of a moped (class AM146)?", "uk": "Яка максимальна конструктивна швидкість мопеда (категорія AM146)?", "ru": "Какая максимальная конструктивная скорость мопеда (категория AM146)?"},
+      "options": [
+        {"id": "a", "text": {"no": "45 km/t", "en": "45 km/h", "uk": "45 км/год", "ru": "45 км/ч"}},
+        {"id": "b", "text": {"no": "25 km/t", "en": "25 km/h", "uk": "25 км/год", "ru": "25 км/ч"}},
+        {"id": "c", "text": {"no": "60 km/t", "en": "60 km/h", "uk": "60 км/год", "ru": "60 км/ч"}}
+      ],
+      "correct": ["a"],
+      "explanation": {"no": "En moped er konstruert for høyst 45 km/t.", "en": "A moped is built for at most 45 km/h.", "uk": "Мопед сконструйований для швидкості не більше 45 км/год.", "ru": "Мопед сконструирован для скорости не более 45 км/ч."},
+      "source": "Kjøretøyforskriften (moped)", "needs_review": true
+    },
+    {
+      "id": "tohjul-002", "topic": "tohjul", "classes": ["A1"], "type": "single", "difficulty": 1,
+      "image": null,
+      "text": {"no": "Fra hvilken alder kan du ta førerkort for lett motorsykkel (A1)?", "en": "From what age can you get a licence for a light motorcycle (A1)?", "uk": "З якого віку можна отримати права на легкий мотоцикл (A1)?", "ru": "С какого возраста можно получить права на лёгкий мотоцикл (A1)?"},
+      "options": [
+        {"id": "a", "text": {"no": "16 år", "en": "16", "uk": "16 років", "ru": "16 лет"}},
+        {"id": "b", "text": {"no": "18 år", "en": "18", "uk": "18 років", "ru": "18 лет"}},
+        {"id": "c", "text": {"no": "20 år", "en": "20", "uk": "20 років", "ru": "20 лет"}}
+      ],
+      "correct": ["a"],
+      "explanation": {"no": "Klasse A1 (inntil 125 cm³ og 11 kW) kan tas fra 16 år.", "en": "Class A1 (up to 125 cc and 11 kW) is available from 16.", "uk": "Категорію A1 (до 125 см³ і 11 кВт) можна отримати з 16 років.", "ru": "Категорию A1 (до 125 см³ и 11 кВт) можно получить с 16 лет."},
+      "source": "Førerkortforskriften (aldersgrenser)", "needs_review": true
+    }
+  ]
+}

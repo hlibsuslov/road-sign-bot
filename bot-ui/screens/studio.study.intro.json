@@ -1,0 +1,57 @@
+{
+  "id": "studio.study.intro",
+  "title": "Навчання: новий знак",
+  "kind": "menu",
+  "audience": "private",
+  "notes": "photo card of sign 100_1 (data/cutouts) with this caption; the next card replaces it in the same message (editMessageMedia)",
+  "message": {
+    "id": "main",
+    "format": "regular.html",
+    "text": {
+      "uk": "<b>Farlig sving, til høyre</b>\n<i>Небезпечний поворот, праворуч</i>\n\nDette skiltet varsler om en farlig sving til høyre.\n\n<i>Цей знак попереджає про небезпечний поворот праворуч.</i>\n\n<b>Категорія:</b> Fareskilt"
+    }
+  },
+  "keyboard": {
+    "type": "inline",
+    "rows": [
+      [
+        "b00"
+      ],
+      [
+        "b10",
+        "b11"
+      ]
+    ]
+  },
+  "actions": {
+    "b00": {
+      "label": {
+        "uk": "➡️ Далі"
+      },
+      "type": "navigate",
+      "to": "studio.study.intro",
+      "presentation": "edit",
+      "style": "primary",
+      "callbackData": "study_next"
+    },
+    "b10": {
+      "label": {
+        "uk": "👍 Я вже знаю"
+      },
+      "type": "navigate",
+      "to": "studio.study.quiz",
+      "presentation": "edit",
+      "callbackData": "know|100_1"
+    },
+    "b11": {
+      "label": {
+        "uk": "ℹ️ Пояснення"
+      },
+      "type": "answer",
+      "text": {
+        "uk": "Відкривається в боті"
+      },
+      "callbackData": "more|100_1"
+    }
+  }
+}

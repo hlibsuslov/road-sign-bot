@@ -1,0 +1,18 @@
+{
+  "id": "main.home_callbacks.alt1",
+  "title": "home_callbacks (branch)",
+  "kind": "result",
+  "audience": "private",
+  "notes": "imported from bot.py:1127",
+  "message": {
+    "id": "main",
+    "format": "regular.html",
+    "text": {
+      "uk": "‹message text›"
+    }
+  },
+  "keyboard": {
+    "type": "inline",
+    "rows": []
+  }
+}

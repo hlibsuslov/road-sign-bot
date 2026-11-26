@@ -1,0 +1,18 @@
+{
+  "id": "main.home_callbacks",
+  "title": "home_callbacks",
+  "kind": "result",
+  "audience": "private",
+  "notes": "imported from bot.py:1119",
+  "message": {
+    "id": "main",
+    "format": "regular.html",
+    "text": {
+      "uk": "‹message text›"
+    }
+  },
+  "keyboard": {
+    "type": "inline",
+    "rows": []
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "id": "studio.study.quiz",
+  "title": "Навчання: квіз",
+  "kind": "form",
+  "audience": "private",
+  "notes": "photo card of sign 302_0 with this caption",
+  "message": {
+    "id": "main",
+    "format": "regular.html",
+    "text": {
+      "uk": "❓ <b>Що означає цей знак?</b>\n\n🔁 Повторення • рівень 2/6"
+    }
+  },
+  "keyboard": {
+    "type": "inline",
+    "rows": [
+      [
+        "b00"
+      ],
+      [
+        "b10"
+      ],
+      [
+        "b20"
+      ],
+      [
+        "b30"
+      ]
+    ]
+  },
+  "actions": {
+    "b00": {
+      "label": {
+        "uk": "Innkjøring forbudt"
+      },
+      "type": "navigate",
+      "to": "studio.study.right",
+      "presentation": "edit",
+      "callbackData": "q|302_0|302_0"
+    },
+    "b10": {
+      "label": {
+        "uk": "Farlig sving, til høyre"
+      },
+      "type": "navigate",
+      "to": "studio.study.wrong",
+      "presentation": "edit",
+      "callbackData": "q|302_0|100_1"
+    },
+    "b20": {
+      "label": {
+        "uk": "Stopp"
+      },
+      "type": "navigate",
+      "to": "studio.study.wrong",
+      "presentation": "edit",
+      "callbackData": "q|302_0|204_0"
+    },
+    "b30": {
+      "label": {
+        "uk": "Forkjørsveg"
+      },
+      "type": "navigate",
+      "to": "studio.study.wrong",
+      "presentation": "edit",
+      "callbackData": "q|302_0|206_0"
+    }
+  }
+}

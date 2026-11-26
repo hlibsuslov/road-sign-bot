@@ -1,0 +1,174 @@
+{
+  "schemaVersion": 1,
+  "projectId": "road-sign-bot",
+  "title": "Підготовка до teoriprøven — бот",
+  "defaultLocale": "uk",
+  "locales": [
+    "uk"
+  ],
+  "entryPoints": [
+    {
+      "id": "start",
+      "type": "command",
+      "command": "start",
+      "screen": "main.start"
+    },
+    {
+      "id": "settings",
+      "type": "command",
+      "command": "settings",
+      "screen": "studio.settings"
+    },
+    {
+      "id": "reset",
+      "type": "command",
+      "command": "reset",
+      "screen": "main.reset"
+    },
+    {
+      "id": "theory",
+      "type": "command",
+      "command": "theory",
+      "screen": "studio.theory"
+    },
+    {
+      "id": "learn",
+      "type": "command",
+      "command": "learn",
+      "screen": "studio.study.intro"
+    },
+    {
+      "id": "stats",
+      "type": "command",
+      "command": "stats",
+      "screen": "studio.stats"
+    },
+    {
+      "id": "categories",
+      "type": "command",
+      "command": "categories",
+      "screen": "studio.categories"
+    },
+    {
+      "id": "premium",
+      "type": "command",
+      "command": "premium",
+      "screen": "studio.premium"
+    },
+    {
+      "id": "home",
+      "type": "deeplink",
+      "payload": "home",
+      "screen": "studio.home"
+    }
+  ],
+  "contexts": [
+    "private"
+  ],
+  "fields": {
+    "btn_study": {
+      "type": "string",
+      "source": "data",
+      "example": "‹btn_study›"
+    },
+    "count": {
+      "type": "string",
+      "source": "data",
+      "example": "‹count›"
+    },
+    "h": {
+      "type": "string",
+      "source": "data",
+      "example": "‹h›"
+    },
+    "input.choose_study_language": {
+      "type": "string",
+      "source": "input",
+      "maxLength": 4096
+    },
+    "input.choose_translation_language": {
+      "type": "string",
+      "source": "input",
+      "maxLength": 4096
+    },
+    "len": {
+      "type": "string",
+      "source": "data",
+      "example": "‹len›"
+    }
+  },
+  "handlers": {
+    "main.start": {
+      "outcomes": [
+        "main",
+        "alt1"
+      ],
+      "description": "bot.py:502 cmd_start (branches imported from if/else)"
+    },
+    "main.quiz_answer_handler": {
+      "outcomes": [
+        "main",
+        "alt1"
+      ],
+      "description": "bot.py:705 quiz_answer_handler (branches imported from if/else)"
+    },
+    "main.reset": {
+      "outcomes": [
+        "main",
+        "alt1"
+      ],
+      "description": "bot.py:1096 cmd_reset (branches imported from if/else)"
+    },
+    "main.home_callbacks": {
+      "outcomes": [
+        "main",
+        "alt1"
+      ],
+      "description": "bot.py:1111 home_callbacks (branches imported from if/else)"
+    },
+    "main.theory": {
+      "outcomes": [
+        "main",
+        "alt1"
+      ],
+      "description": "bot.py:1132 cmd_theory (branches imported from if/else)"
+    },
+    "main.mydata": {
+      "outcomes": [
+        "main",
+        "alt1"
+      ],
+      "description": "bot.py:1173 cmd_mydata (branches imported from if/else)"
+    },
+    "main.deletedata": {
+      "outcomes": [
+        "main",
+        "alt1"
+      ],
+      "description": "bot.py:1183 cmd_deletedata (branches imported from if/else)"
+    },
+    "main.data_callbacks": {
+      "outcomes": [
+        "main",
+        "alt1",
+        "alt2"
+      ],
+      "description": "bot.py:1198 data_callbacks (branches imported from if/else)"
+    },
+    "main.unknown_message_handler": {
+      "outcomes": [
+        "main",
+        "alt1"
+      ],
+      "description": "bot.py:1269 unknown_message_handler (branches imported from if/else)"
+    }
+  },
+  "capabilities": {
+    "widgets": false,
+    "richMessages": false
+  },
+  "adapter": {
+    "sdk": "aiogram",
+    "source": "imported by bot-ui import; the bot's code is unchanged"
+  }
+}
