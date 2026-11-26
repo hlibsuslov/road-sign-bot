@@ -62,3 +62,20 @@
 
 /* the kit gives the tab bar display:flex, which beats [hidden] */
 .tma-tabbar[hidden] { display: none; }
+
+/* Swipe cards: right = I know it, left = not yet; tap flips */
+.swipe-stage { position: relative; display: grid; place-items: center; min-height: 440px; margin-top: var(--tma-s3); }
+.swipe-card { position: relative; width: min(340px, 88vw); min-height: 420px; touch-action: pan-y; cursor: grab;
+  transition: transform var(--tma-dur) var(--tma-ease), opacity var(--tma-dur) var(--tma-ease); }
+.swipe-card.is-dragging { transition: none; cursor: grabbing; }
+.swipe-face { position: absolute; inset: 0; display: grid; align-content: center; justify-items: center; gap: var(--tma-s3);
+  padding: var(--tma-s5); border-radius: var(--tma-r-group); background: var(--tma-surface); text-align: center;
+  box-shadow: 0 6px 24px rgb(0 0 0 / .12); backface-visibility: hidden; transition: transform .35s var(--tma-ease); }
+.swipe-face.is-back { transform: rotateY(180deg); }
+.swipe-card.is-flipped .swipe-face:not(.is-back) { transform: rotateY(180deg); }
+.swipe-card.is-flipped .swipe-face.is-back { transform: rotateY(0); }
+.swipe-card[data-lean="right"] .swipe-face { box-shadow: 0 0 0 3px var(--tma-success); }
+.swipe-card[data-lean="left"] .swipe-face { box-shadow: 0 0 0 3px var(--tma-danger); }
+.swipe-card.is-gone-right { transform: translateX(140%) rotate(18deg) !important; opacity: 0; }
+.swipe-card.is-gone-left { transform: translateX(-140%) rotate(-18deg) !important; opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .swipe-card, .swipe-face { transition: none; } }

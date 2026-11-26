@@ -119,6 +119,14 @@ class MiniAppServerTests(AioHTTPTestCase):
                                      headers=self.auth())
         self.assertEqual(bad.status, 400)
 
+    async def test_swipe_rating_moves_the_sign_in_the_leitner_queue(self):
+        right = await self.client.post("/api/study/rate", json={"sign_id": "302_0", "known": True}, headers=self.auth())
+        self.assertEqual((await right.json())["box"], 1)
+        left = await self.client.post("/api/study/rate", json={"sign_id": "302_0", "known": False}, headers=self.auth())
+        self.assertEqual((await left.json())["box"], 0)
+        bad = await self.client.post("/api/study/rate", json={"sign_id": "302_0", "known": "yes"}, headers=self.auth())
+        self.assertEqual(bad.status, 400)
+
     async def test_unregistered_user_gets_a_clear_error(self):
         resp = await self.client.get("/api/study/next", headers=self.auth(7))
         self.assertEqual(resp.status, 409)

@@ -289,6 +289,25 @@ def create_app(*, db, bot_token: str, get_catalog, signs_main: dict, get_valid,
             "next_in": next_review - now,
         })
 
+    async def study_rate(request: web.Request):
+        """Swipe cards: the learner rates themself (right = I know it, left = not yet)."""
+        user_id = user_id_from(request)
+        registered_user(user_id)
+        require_premium(user_id)
+        data = await body(request)
+        sign_id, known = valid_sign(data.get("sign_id")), data.get("known")
+        if not isinstance(known, bool):
+            raise web.HTTPBadRequest(text="known: true/false")
+        now = int(time.time())
+        progress = db.get_progress(user_id, sign_id)
+        if progress is None:
+            box, next_review = learning.schedule_after_intro(now)
+            db.introduce_sign(user_id, sign_id, box, next_review)
+            progress = db.get_progress(user_id, sign_id)
+        new_box, next_review = learning.schedule_after_answer(progress["box"], known, now)
+        db.record_answer(user_id, sign_id, known, new_box, next_review)
+        return no_store({"box": new_box, "max_box": learning.MAX_BOX, "next_in": next_review - now})
+
     # ------------------------------------------------------------ tests
 
     async def exam_start(request: web.Request):
@@ -483,6 +502,7 @@ def create_app(*, db, bot_token: str, get_catalog, signs_main: dict, get_valid,
     app.router.add_post("/api/study/seen", study_seen)
     app.router.add_post("/api/study/known", study_known)
     app.router.add_post("/api/study/answer", study_answer)
+    app.router.add_post("/api/study/rate", study_rate)
     app.router.add_post("/api/exam/start", exam_start)
     app.router.add_get("/api/exam/{exam_id}/{n}.webp", exam_image)
     app.router.add_post("/api/exam/finish", exam_finish)

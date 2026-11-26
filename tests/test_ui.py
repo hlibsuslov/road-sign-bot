@@ -105,8 +105,8 @@ class KeyboardTests(unittest.TestCase):
         labels = [button.text for row in markup.keyboard for button in row]
 
         self.assertTrue(markup.resize_keyboard)
-        self.assertTrue(markup.is_persistent)
-        self.assertFalse(markup.one_time_keyboard)
+        self.assertFalse(markup.is_persistent)
+        self.assertTrue(markup.one_time_keyboard)            # hides while the user learns
         self.assertLessEqual(len(markup.input_field_placeholder), 64)
         self.assertEqual(markup.keyboard[0][0].style, "primary")
         self.assertEqual(

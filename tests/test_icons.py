@@ -19,6 +19,14 @@ def sticker(emoji, cid, animated=False):
 class IconTests(unittest.TestCase):
     def tearDown(self):
         icons._state.ids = {}
+        icons._state.static_ids = {}
+
+    def test_buttons_never_get_animated_emoji(self):
+        icons._state.ids = {"settings": "777"}
+        icons._state.static_ids = {}
+        with patch.dict(os.environ, {"CUSTOM_EMOJI": "1"}):
+            self.assertEqual(icons.label("settings", "Налаштування"), ("⚙️ Налаштування", None))
+            self.assertIn("777", icons.tg("settings"))            # texts may use it
 
     def test_slots_resolve_by_meaning_and_prefer_static(self):
         pack = SimpleNamespace(stickers=[
@@ -39,7 +47,8 @@ class IconTests(unittest.TestCase):
             self.assertEqual(icons.label("settings", "Налаштування"), ("⚙️ Налаштування", None))
 
     def test_enabled_buttons_carry_the_icon_and_plain_text(self):
-        icons._state.ids = {"back": "222", "selected": "333"}
+        icons._state.ids = {"back": "999", "selected": "333"}      # animated: texts only
+        icons._state.static_ids = {"back": "222"}                  # static: allowed on buttons
         with patch.dict(os.environ, {"CUSTOM_EMOJI": "1"}):
             back = keyboards.back("settings_back")
             self.assertEqual(back.text, "Назад")
