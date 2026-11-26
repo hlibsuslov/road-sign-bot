@@ -321,7 +321,7 @@ async def send_study_step(message: Message, user_id: int, edit: bool = False):
         nearest = learning.earliest_due(pool, progress_map)
         in_queue = sum(1 for s in pool if s in progress_map)
         text = (
-            "✅ <b>На зараз усе</b>\n\n"
+            f"{icons.tg('done')} <b>На зараз усе</b>\n\n"
             f"У черзі: {in_queue} знаків.\n"
         )
         kb = get_main_menu_keyboard()
@@ -375,7 +375,7 @@ def settings_values(user) -> list[tuple[str, str]]:
 
 def build_settings_rich_message(user) -> InputRichMessage:
     return InputRichMessage(blocks=[
-        InputRichBlockSectionHeading(text="⚙️ Налаштування", size=2),
+        InputRichBlockSectionHeading(text="Налаштування", size=2),
         rich_table("Поточні значення", ("Параметр", "Значення"), settings_values(user)),
         InputRichBlockParagraph(text="Оберіть, що змінити. Зміни застосовуються одразу."),
     ])
@@ -384,7 +384,7 @@ def build_settings_rich_message(user) -> InputRichMessage:
 def build_settings_text(user) -> str:
     values = settings_values(user)
     return (
-        "⚙️ <b>Налаштування</b>\n\n"
+        f"{icons.tg('settings')} <b>Налаштування</b>\n\n"
         f"<b>{h(values[0][0])}:</b> {h(values[0][1])}\n"
         f"<b>{h(values[1][0])}:</b> {h(values[1][1])}\n"
         f"<b>{h(values[2][0])}:</b> {h(values[2][1])}\n\n"
@@ -535,7 +535,7 @@ def build_statistics_text(*, mastered: int, total: int,
                           category_rows: list[tuple[str, int, int]]) -> str:
     pct = mastered / total * 100 if total else 0
     text = (
-        "📊 <b>Ваш прогрес</b>\n\n"
+        f"{icons.tg('stats')} <b>Ваш прогрес</b>\n\n"
         f"<code>{h(learning.progress_bar(mastered, total))}</code> {pct:.0f}%\n\n"
         "<b>Знаки</b>\n"
         f"Вивчено: {mastered}/{total}\n"
@@ -576,7 +576,7 @@ async def cmd_start(message: Message, state: FSMContext):
         acq = payload[0][:64] if payload[0].startswith(ACQUISITION_PREFIXES) else ""
         await state.set_data({"source": "onboarding", "acq": acq})
         await message.answer(
-            "👋 <b>Підготовка до теоретичного іспиту в Норвегії</b>\n\n"
+            f"{icons.tg('study')} <b>Підготовка до теоретичного іспиту в Норвегії</b>\n\n"
             "Знаки, правила й ситуації на дорозі, тести як на teoriprøven. "
             "Бот повертає те, що ви забуваєте, саме тоді, коли треба повторити.\n\n"
             "<b>Оберіть мову назв і питань:</b>",
@@ -641,7 +641,7 @@ def theory_screen_text(licence: str) -> str:
             rows.append(f"• {h(t['names']['uk'])} — {counts[t['id']]} питань")
     tail = ("Відкрийте застосунок: практика за темами, ситуації на схемах і тест із таймером."
             if WEBAPP_URL else "Практика за темами й тести з'являться в застосунку «Знаки».")
-    return (f"📚 <b>Теорія і тести</b> · категорія {h(licence)}\n\n" + "\n".join(rows) + f"\n\n{tail}")
+    return (f"{icons.tg('theory')} <b>Теорія і тести</b> · категорія {h(licence)}\n\n" + "\n".join(rows) + f"\n\n{tail}")
 
 
 @dp.callback_query(F.data.in_(["lang_no", "lang_en"]), StateFilter(OnboardingStates.choose_study_language))
@@ -716,7 +716,7 @@ async def choose_translation_language(callback: CallbackQuery, state: FSMContext
         return
 
     await callback.message.edit_text(
-        f"✅ <b>Налаштування збережено</b>\n\n"
+        f"{icons.tg('correct')} <b>Налаштування збережено</b>\n\n"
         f"{h(summary)}\n"
         f"У базі: {len(VALID_SIGNS)} знаків.",
         parse_mode=ParseMode.HTML,
@@ -1046,7 +1046,7 @@ async def show_categories(message: Message, user_id: int):
         return
 
     await message.answer(
-        "📂 <b>Категорії для навчання</b>\n\n"
+        f"{icons.tg('categories')} <b>Категорії для навчання</b>\n\n"
         "Торкніться категорії, щоб увімкнути або вимкнути її. "
         f"{icons.tg('selected')} — у навчанні.\n\n"
         "Зміни зберігаються одразу.",
@@ -1097,7 +1097,7 @@ async def set_category_callback(callback: CallbackQuery):
         except TelegramBadRequest:
             await callback.message.edit_reply_markup(reply_markup=None)
         await callback.message.answer(
-            f"✅ <b>Категорії оновлено</b>\n\n"
+            f"{icons.tg('correct')} <b>Категорії оновлено</b>\n\n"
             f"{h(cat_summary)}\n"
             f"Знаків у добірці: {count}\n\n"
             f"Оберіть «{BTN_STUDY}», щоб продовжити.",
@@ -1152,7 +1152,7 @@ async def change_theme_menu(callback: CallbackQuery):
     await callback.answer()
     theme = user["theme"] or "light"
     await callback.message.edit_text(
-        "🎨 <b>Тема карток</b>\n\n"
+        f"{icons.tg('theme')} <b>Тема карток</b>\n\n"
         f"Поточна тема: <b>{h(THEME_NAMES.get(theme, theme))}</b>\n"
         "Вона змінює фон зображень дорожніх знаків.",
         parse_mode=ParseMode.HTML,
@@ -1187,7 +1187,7 @@ async def change_language_handler(callback: CallbackQuery, state: FSMContext):
     })
     await state.set_state(OnboardingStates.choose_study_language)
     await callback.message.edit_text(
-        "🌐 <b>Мова знаків</b>\n\n"
+        f"{icons.tg('language')} <b>Мова знаків</b>\n\n"
         "Оберіть мову назв і варіантів відповіді:",
         parse_mode=ParseMode.HTML,
         reply_markup=get_language_keyboard(
@@ -1219,7 +1219,7 @@ async def reset_confirm_handler(callback: CallbackQuery, state: FSMContext):
     db.reset_progress(callback.from_user.id)
     await state.clear()
     await callback.message.edit_text(
-        "✅ <b>Прогрес скинуто</b>\n\nУсі знаки знову доступні для навчання.",
+        f"{icons.tg('correct')} <b>Прогрес скинуто</b>\n\nУсі знаки знову доступні для навчання.",
         parse_mode=ParseMode.HTML,
     )
     await callback.message.answer(
@@ -1306,7 +1306,7 @@ async def data_callbacks(callback: CallbackQuery, state: FSMContext):
     else:
         db.delete_user_data(callback.from_user.id)
         await state.clear()
-        await callback.message.edit_text("✅ <b>Дані видалено</b>\n\nЩоб почати знову, відкрийте /start.",
+        await callback.message.edit_text(f"{icons.tg('correct')} <b>Дані видалено</b>\n\nЩоб почати знову, відкрийте /start.",
                                          parse_mode=ParseMode.HTML)
 
 
