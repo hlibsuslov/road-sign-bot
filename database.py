@@ -6,7 +6,7 @@ from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 # Профіль користувача (v4). Лише поля з явною метою: звертання, мова, нагадування у
 # зручний час, план підготовки. Без історії імен (references/user-profile.md §0).
@@ -48,6 +48,8 @@ class Database:
       theory_answers — прогрес по питаннях теорії
     v5:
       subscriptions.first_charge_id — заряд, що почав підписку (для editUserStarSubscription)
+    v6:
+      checkout_holds — одна схвалена оплата на користувача, поки вона не завершиться
     """
 
     def __init__(self, db_path: str = "road_signs_bot.db"):
@@ -192,6 +194,12 @@ class Database:
             )
         """)
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_exams_user ON exams (user_id, created_at)")
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS checkout_holds (
+                user_id INTEGER PRIMARY KEY,
+                created_at INTEGER NOT NULL
+            )
+        """)
         sub_cols = {r["name"] for r in cursor.execute("PRAGMA table_info(subscriptions)")}
         if "first_charge_id" not in sub_cols:
             # the charge that started the subscription: editUserStarSubscription needs it,
@@ -451,6 +459,22 @@ class Database:
             )
             conn.commit()
             return True
+
+    def reserve_checkout(self, user_id: int, now: int, hold_seconds: int) -> bool:
+        """Atomic: True if this user had no live hold and now has one."""
+        with self.get_connection() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            conn.execute("DELETE FROM checkout_holds WHERE user_id = ? AND created_at < ?",
+                         (user_id, now - hold_seconds))
+            cur = conn.execute("INSERT OR IGNORE INTO checkout_holds (user_id, created_at) VALUES (?, ?)",
+                               (user_id, now))
+            conn.commit()
+            return cur.rowcount == 1
+
+    def release_checkout(self, user_id: int) -> None:
+        with self.get_connection() as conn:
+            conn.execute("DELETE FROM checkout_holds WHERE user_id = ?", (user_id,))
+            conn.commit()
 
     def open_exam_count(self, user_id: int, since: int) -> int:
         with self.get_connection() as conn:

@@ -279,13 +279,12 @@ class PremiumTests(unittest.TestCase):
         self.assertFalse(self.db.apply_refund(6, "c1"))                 # not their charge
 
     def test_checkout_refused_when_paywall_off_or_already_pending(self):
-        premium._pending_checkout.clear()
         with patch.dict(os.environ, {"PAYWALL_ENABLED": "0"}):
             self.assertIsNotNone(premium.check_pre_checkout(self.db, 5, "premium:5", "XTR", 50))
         self.assertIsNone(premium.check_pre_checkout(self.db, 5, "premium:5", "XTR", 50))
         self.assertIsNotNone(premium.check_pre_checkout(self.db, 5, "premium:5", "XTR", 50))   # second, overlapping
         premium.apply_payment(self.db, 5, self.payment("c1", int(time.time()) + 3600))
-        self.assertNotIn(5, premium._pending_checkout)                                         # released
+        self.assertTrue(self.db.reserve_checkout(5, int(time.time()), premium.CHECKOUT_HOLD))  # released after payment
 
     def test_cancel_uses_the_first_charge_after_renewals(self):
         now = int(time.time())

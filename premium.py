@@ -52,8 +52,7 @@ router = Router(name="premium")
 router.message.filter(F.chat.type == "private")
 router.callback_query.filter(F.message.chat.type == "private")
 
-CHECKOUT_HOLD = 15 * 60           # one approved checkout per user at a time
-_pending_checkout: dict[int, float] = {}
+CHECKOUT_HOLD = 15 * 60           # one approved checkout per user at a time (stored in the DB)
 UNAPPLIED_LOG = os.path.join(os.path.dirname(os.getenv("DB_PATH", "road_signs_bot.db")) or ".",
                              "unapplied_payments.jsonl")
 
@@ -117,10 +116,8 @@ def check_pre_checkout(db, user_id: int, payload: str, currency: str, amount: in
     st = status(db, user_id)
     if st["active"] and st["renews"]:
         return "Преміум уже активний — друга підписка не потрібна."
-    now = time.monotonic()
-    if now - _pending_checkout.get(user_id, -CHECKOUT_HOLD) < CHECKOUT_HOLD:
+    if not db.reserve_checkout(user_id, int(time.time()), CHECKOUT_HOLD):
         return "Оплата вже триває. Зачекайте кілька хвилин і перевірте /premium."
-    _pending_checkout[user_id] = now   # single process: the check and the hold are atomic
     return None
 
 
@@ -142,9 +139,8 @@ def apply_payment(db, user_id: int, pay) -> int | None:
         # Polling won't redeliver this update: keep it on the volume and replay it at startup.
         logger.exception("PAYMENT NOT APPLIED: user %s charge %s", user_id, pay.telegram_payment_charge_id)
         _log_unapplied(user_id, pay, expires)
-        raise
-    finally:
-        _pending_checkout.pop(user_id, None)
+        raise   # the hold stays until it expires: no second checkout while this one is unresolved
+    db.release_checkout(user_id)
     return expires if fresh else None
 
 

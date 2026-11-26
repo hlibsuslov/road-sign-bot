@@ -248,7 +248,10 @@ class MessageTests(unittest.TestCase):
         rich_message = app.build_statistics_rich_message(**kwargs)
         fallback = app.build_statistics_text(**kwargs)
 
-        self.assertIn("Ще немає відповідей", rich_message.blocks[-1].text)
+        self.assertIn("Ще немає відповідей", rich_message.blocks[-2].text)
+        buttons = rich_message.blocks[-1].buttons                 # embedded rich buttons close the message
+        self.assertEqual(buttons[0].callback_data, "study_next")
+        self.assertEqual(buttons[0].style, "primary")
         self.assertIn("Точність: —", fallback)
         self.assertIn("Попереджувальні &lt;&amp;&gt;", fallback)
         self.assertNotIn("Попереджувальні <&>", fallback)
