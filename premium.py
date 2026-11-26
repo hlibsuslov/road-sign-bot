@@ -164,20 +164,28 @@ def replay_unapplied(db) -> int:
     if not os.path.exists(UNAPPLIED_LOG):
         return 0
     with open(UNAPPLIED_LOG, encoding="utf-8") as f:
-        lines = [l for l in f if l.strip()]
-    left, done = [], 0
+        lines = [l if l.endswith("\n") else l + "\n" for l in f if l.strip()]
+    left, bad, done = [], [], 0
     for line in lines:
-        rec = json.loads(line)
         try:
+            rec = json.loads(line)
             db.apply_subscription_payment(
                 charge_id=rec["charge_id"], user_id=rec["user_id"], amount=rec["amount"],
                 currency=rec["currency"], payload=rec["payload"], expires_at=rec["expires_at"],
                 is_recurring=rec["is_recurring"], is_first_recurring=rec["is_first_recurring"])
             done += 1
+        except (ValueError, KeyError, TypeError):
+            bad.append(line)            # unreadable record: keep it aside for a human
         except Exception:
-            left.append(line)
-    with open(UNAPPLIED_LOG, "w", encoding="utf-8") as f:
+            left.append(line)           # database still failing: try again next start
+    if bad:
+        with open(UNAPPLIED_LOG + ".bad", "a", encoding="utf-8") as f:
+            f.writelines(bad)
+        logger.error("%s unreadable payment record(s) moved to %s.bad", len(bad), UNAPPLIED_LOG)
+    tmp = UNAPPLIED_LOG + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         f.writelines(left)
+    os.replace(tmp, UNAPPLIED_LOG)      # atomic: never a half-written journal
     if done:
         logger.warning("Replayed %s unapplied payment(s); %s still pending", done, len(left))
     return done
@@ -262,8 +270,14 @@ def setup(db):
             logger.warning("editUserStarSubscription failed: %s", exc)
             await callback.answer("Не вдалося змінити підписку. Спробуйте пізніше.", show_alert=True)
             return
-        db.set_subscription_canceled(callback.from_user.id, cancel)
-        await callback.answer("Продовження вимкнено" if cancel else "Продовження увімкнено")
+        if cancel:
+            db.set_subscription_canceled(callback.from_user.id, True)
+            await callback.answer("Продовження вимкнено")
+        else:
+            # Telegram only lets the subscriber turn renewal back on; the next renewal
+            # payment marks the subscription as renewing again.
+            await callback.answer("Тепер увімкніть продовження в Telegram: Налаштування → Мої зірки.",
+                                  show_alert=True)
         await show(callback.message, db, callback.from_user.id, bot, edit=True)
 
     @router.pre_checkout_query()

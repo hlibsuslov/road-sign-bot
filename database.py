@@ -6,7 +6,7 @@ from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 # Профіль користувача (v4). Лише поля з явною метою: звертання, мова, нагадування у
 # зручний час, план підготовки. Без історії імен (references/user-profile.md §0).
@@ -46,6 +46,8 @@ class Database:
               мова клієнта, звідки прийшов (/start payload), часовий пояс, нагадування,
               категорія прав, дата іспиту, денна мета
       theory_answers — прогрес по питаннях теорії
+    v5:
+      subscriptions.first_charge_id — заряд, що почав підписку (для editUserStarSubscription)
     """
 
     def __init__(self, db_path: str = "road_signs_bot.db"):
@@ -432,6 +434,15 @@ class Database:
                 (now, charge_id, user_id),
             )
             if cur.rowcount != 1:
+                # The refund came before its payment was saved (or replayed): remember the
+                # charge as refunded, so a later replay of that payment grants nothing.
+                conn.execute("""
+                    INSERT OR IGNORE INTO payments
+                        (charge_id, user_id, amount, currency, payload, is_recurring,
+                         is_first_recurring, created_at, refunded_at)
+                    VALUES (?, ?, 0, 'XTR', 'refund-before-payment', 0, 0, ?, ?)
+                """, (charge_id, user_id, now, now))
+                conn.commit()
                 return False
             conn.execute(
                 "UPDATE subscriptions SET expires_at = ?, is_canceled = 1, updated_at = ? "

@@ -1356,7 +1356,10 @@ async def main():
     global VALID_SIGNS
     logger.info("Бот запускається...")
     db.init_db()
-    premium.replay_unapplied(db)
+    try:
+        premium.replay_unapplied(db)
+    except Exception:  # the bot must start even if the payment journal is broken
+        logger.exception("Payment journal replay failed; records kept for the next start")
     db.purge_old_exams(int(time.time()) - 90 * 86400)
 
     # Перевірка картинок при старті

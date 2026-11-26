@@ -306,6 +306,36 @@ class PremiumTests(unittest.TestCase):
             self.assertEqual(premium.replay_unapplied(self.db), 0)
         self.assertTrue(premium.is_premium(self.db, 5))
 
+    def test_v4_database_gets_the_first_charge_column(self):
+        import sqlite3
+        path = os.path.join(self.tmp.name, "v4.db")
+        db = Database(path)
+        db.init_db()
+        conn = sqlite3.connect(path)                      # simulate a build that stopped at v4
+        conn.execute("ALTER TABLE subscriptions DROP COLUMN first_charge_id")
+        conn.execute("UPDATE meta SET value = '4' WHERE key = 'schema_version'")
+        conn.commit()
+        conn.close()
+        db.init_db()
+        db.upsert_user(1, "no", "uk")
+        self.assertTrue(db.apply_subscription_payment(
+            charge_id="x", user_id=1, amount=50, currency="XTR", payload="premium:1",
+            expires_at=int(time.time()) + 60, is_recurring=True, is_first_recurring=True))
+        self.assertEqual(db.get_subscription(1)["first_charge_id"], "x")
+
+    def test_refund_before_replay_blocks_the_grant(self):
+        log = os.path.join(self.tmp.name, "unapplied2.jsonl")
+        with patch.object(premium, "UNAPPLIED_LOG", log),                 patch.object(self.db, "apply_subscription_payment", side_effect=RuntimeError("locked")):
+            with self.assertRaises(RuntimeError):
+                premium.apply_payment(self.db, 5, self.payment("early", int(time.time()) + 3600))
+        self.assertFalse(self.db.apply_refund(5, "early"))  # refund arrives first
+        with open(log, "a", encoding="utf-8") as f:
+            f.write('{"broken json\n')                        # a torn line must not stop startup
+        with patch.object(premium, "UNAPPLIED_LOG", log):
+            premium.replay_unapplied(self.db)
+        self.assertFalse(premium.is_premium(self.db, 5))
+        self.assertTrue(os.path.exists(log + ".bad"))
+
     def test_access_ends_after_the_grace_window(self):
         now = int(time.time())
         premium.apply_payment(self.db, 5, self.payment("c1", now - premium.GRACE_SECONDS - 1))
