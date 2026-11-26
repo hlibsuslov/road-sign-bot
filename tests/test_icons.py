@@ -71,5 +71,22 @@ class ProgressCardTests(unittest.TestCase):
         tmp.cleanup()
 
 
+
+class StaleErrorTests(unittest.TestCase):
+    def test_stale_telegram_errors_are_not_crashes(self):
+        os.environ.setdefault("BOT_TOKEN", "123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi")
+        import bot
+        from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
+        from aiogram.methods import AnswerCallbackQuery
+        method = AnswerCallbackQuery(callback_query_id="1")
+        old = TelegramBadRequest(method=method, message="Bad Request: query is too old and response timeout expired or query ID is invalid")
+        blocked = TelegramForbiddenError(method=method, message="Forbidden: bot was blocked by the user")
+        real = TelegramBadRequest(method=method, message="Bad Request: can't parse entities")
+        self.assertTrue(bot.is_stale_telegram_error(old))
+        self.assertTrue(bot.is_stale_telegram_error(blocked))
+        self.assertFalse(bot.is_stale_telegram_error(real))
+        self.assertFalse(bot.is_stale_telegram_error(ValueError("query is too old")))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -28,7 +28,7 @@ from aiogram.types import (
     RichBlockTableCell,
     WebAppInfo,
 )
-from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
+from aiogram.exceptions import TelegramAPIError, TelegramBadRequest, TelegramForbiddenError
 
 import icons
 import learning
@@ -1317,6 +1317,18 @@ async def unknown_message_handler(message: Message):
 
 # ==================== Обробка помилок ====================
 
+STALE_TELEGRAM_ERRORS = (
+    "query is too old", "query id is invalid", "message to edit not found",
+    "message can't be edited", "message to delete not found", "bot was blocked by the user",
+    "user is deactivated", "chat not found",
+)
+
+
+def is_stale_telegram_error(exc: BaseException) -> bool:
+    return isinstance(exc, (TelegramBadRequest, TelegramForbiddenError)) and \
+        any(s in str(exc).lower() for s in STALE_TELEGRAM_ERRORS)
+
+
 @dp.errors()
 async def on_error(event: ErrorEvent):
     """Глобальний обробник помилок aiogram.
@@ -1328,6 +1340,12 @@ async def on_error(event: ErrorEvent):
     """
     exc = event.exception
     if isinstance(exc, TelegramBadRequest) and "message is not modified" in str(exc).lower():
+        return True
+    if is_stale_telegram_error(exc):
+        # Not a bug: a button pressed while the bot restarted, a deleted message, a user
+        # who blocked the bot. One line, no traceback: the deploy health check reads any
+        # traceback as a crash and rolls the release back.
+        logger.warning("Telegram відхилив застарілу дію: %s", exc)
         return True
     logger.exception("Необроблена помилка при обробці апдейту: %r", exc)
     try:
