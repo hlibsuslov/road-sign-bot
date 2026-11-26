@@ -13,12 +13,16 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import (
+    InlineKeyboardMarkup,
     Message,
     CallbackQuery,
     FSInputFile,
     BufferedInputFile,
     ErrorEvent,
     BotCommand,
+    InputRichBlockButtons,
+    InputRichBlockList,
+    InputRichBlockListItem,
     InputRichBlockParagraph,
     InputRichBlockSectionHeading,
     InputRichBlockTable,
@@ -26,11 +30,13 @@ from aiogram.types import (
     InputRichMessage,
     MenuButtonWebApp,
     RichBlockTableCell,
+    RichMessageButton,
     WebAppInfo,
 )
 from aiogram.exceptions import TelegramAPIError, TelegramBadRequest, TelegramForbiddenError
 
 import icons
+import keyboards as kbd
 import learning
 import premium
 import progress_card
@@ -432,6 +438,56 @@ def days_text(days: int) -> str:
     return f"{days} {suffix}"
 
 
+def rich_buttons(*buttons: RichMessageButton | None) -> InputRichBlockButtons:
+    """Buttons embedded in a Rich Message (Bot API 10.5): they sit right under the content
+    they act on, not in the keyboard at the bottom."""
+    return InputRichBlockButtons(buttons=[b for b in buttons if b], align="left")
+
+
+def app_button(text: str) -> RichMessageButton | None:
+    return RichMessageButton(text=text, web_app=WebAppInfo(url=WEBAPP_URL)) if WEBAPP_URL else None
+
+
+def build_theory_rich_message(licence: str) -> InputRichMessage:
+    counts: dict[str, int] = {}
+    for q in theory.for_class(THEORY_QUESTIONS, licence):
+        counts[q["topic"]] = counts.get(q["topic"], 0) + 1
+    items = []
+    for t in sorted(THEORY_TOPICS["topics"], key=lambda t: t["order"]):
+        if t.get("classes") and licence not in t["classes"]:
+            continue
+        if t["kind"] == "signs":
+            label = f"{t['names']['uk']} — {len(VALID_SIGNS)} знаків"
+        elif counts.get(t["id"]):
+            label = f"{t['names']['uk']} — {counts[t['id']]} питань"
+        else:
+            continue
+        items.append(InputRichBlockListItem(blocks=[InputRichBlockParagraph(text=label)]))
+    return InputRichMessage(blocks=[
+        InputRichBlockSectionHeading(text=f"Теорія і тести · категорія {licence}", size=2),
+        InputRichBlockList(items=items),
+        InputRichBlockParagraph(text="Практика за темами, ситуації на схемах і тест із таймером — у застосунку."),
+        rich_buttons(app_button("Відкрити застосунок"),
+                     RichMessageButton(text="Вчити знаки", callback_data="study_next",
+                                       style=None if WEBAPP_URL else "primary")),
+    ])
+
+
+async def send_theory(message: Message, licence: str, *, edit: bool = False) -> None:
+    """Rich Message with the topics and embedded buttons; plain HTML if the client or SDK refuses."""
+    kb = InlineKeyboardMarkup(inline_keyboard=[[kbd.button("home", "Головна", callback_data="home_open")]])
+    try:
+        if edit:
+            await message.edit_text(rich_message=build_theory_rich_message(licence), reply_markup=kb)
+        else:
+            await message.answer_rich(rich_message=build_theory_rich_message(licence), reply_markup=kb)
+    except TelegramAPIError as exc:
+        logger.warning("Rich theory fallback: %s", exc)
+        method = message.edit_text if edit else message.answer
+        await method(theory_screen_text(licence), parse_mode=ParseMode.HTML,
+                     reply_markup=get_theory_keyboard(WEBAPP_URL))
+
+
 def build_statistics_rich_message(*, mastered: int, total: int,
                                   in_learning: int, new: int, due_now: int,
                                   answered: int, correct_total: int,
@@ -445,8 +501,8 @@ def build_statistics_rich_message(*, mastered: int, total: int,
         for name, done, cat_total in category_rows
     ]
     blocks = [
-        InputRichBlockSectionHeading(text="📊 Ваш прогрес", size=2),
-        InputRichBlockParagraph(text=f"{bar}  {pct:.0f}% опановано"),
+        InputRichBlockSectionHeading(text="Ваш прогрес", size=2),
+        InputRichBlockParagraph(text=f"Опановано {pct:.0f}% бази знаків"),
         rich_table("Знаки", ("Стан", "Кількість"), [
             ("Вивчено", f"{mastered}/{total}"),
             ("На вивченні", str(in_learning)),
@@ -464,6 +520,10 @@ def build_statistics_rich_message(*, mastered: int, total: int,
         blocks.append(InputRichBlockParagraph(
             text="Ще немає відповідей. Почніть навчання — тут з’являться точність і серія."
         ))
+    blocks.append(rich_buttons(
+        RichMessageButton(text="Вчитися", callback_data="study_next", style="primary"),
+        app_button("Прогрес у застосунку"),
+    ))
     return InputRichMessage(blocks=blocks)
 
 
@@ -1200,8 +1260,7 @@ async def home_callbacks(callback: CallbackQuery):
     elif callback.data == "home_settings":
         await answer_settings_screen(callback.message, user)
     else:
-        await callback.message.edit_text(theory_screen_text(user["licence_class"]), parse_mode=ParseMode.HTML,
-                                         reply_markup=get_theory_keyboard(WEBAPP_URL))
+        await send_theory(callback.message, user["licence_class"], edit=True)
 
 
 @dp.message(Command("theory"))
@@ -1211,8 +1270,7 @@ async def cmd_theory(message: Message, state: FSMContext):
     if user is None:
         await message.answer("Спочатку відкрийте /start.")
         return
-    await message.answer(theory_screen_text(user["licence_class"]), parse_mode=ParseMode.HTML,
-                         reply_markup=get_theory_keyboard(WEBAPP_URL))
+    await send_theory(message, user["licence_class"])
 
 
 def mydata_text(user) -> str:

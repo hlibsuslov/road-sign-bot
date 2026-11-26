@@ -88,5 +88,20 @@ class StaleErrorTests(unittest.TestCase):
         self.assertFalse(bot.is_stale_telegram_error(ValueError("query is too old")))
 
 
+
+class TheoryRichTests(unittest.TestCase):
+    def test_theory_rich_message_embeds_buttons_after_the_list(self):
+        os.environ.setdefault("BOT_TOKEN", "123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi")
+        import bot
+        with patch.object(bot, "WEBAPP_URL", "https://example.test/"), patch.object(bot, "VALID_SIGNS", ["100_1"]):
+            msg = bot.build_theory_rich_message("B")
+        kinds = [type(b).__name__ for b in msg.blocks]
+        self.assertEqual(kinds[-1], "InputRichBlockButtons")
+        self.assertIn("InputRichBlockList", kinds)
+        first, second = msg.blocks[-1].buttons
+        self.assertEqual(first.web_app.url, "https://example.test/")
+        self.assertEqual(second.callback_data, "study_next")
+
+
 if __name__ == "__main__":
     unittest.main()
