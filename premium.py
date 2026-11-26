@@ -26,6 +26,8 @@ from html import escape
 from aiogram import Bot, F, Router
 from aiogram.enums import ParseMode
 from aiogram.filters import Command
+import icons
+import keyboards as kbd
 from aiogram.types import (
     CallbackQuery,
     InlineKeyboardButton,
@@ -41,7 +43,6 @@ PERIOD_SECONDS = 2592000          # the only period Telegram allows for Stars su
 GRACE_SECONDS = 6 * 3600          # a renewal can arrive a little after the period ends
 PAYLOAD_PREFIX = "premium:"
 
-BTN_PREMIUM = "⭐ Преміум"
 FEATURES = (
     "навчання і тести в застосунку «Знаки»",
     "режим іспиту з таймером і розбором помилок",
@@ -187,6 +188,15 @@ def replay_unapplied(db) -> int:
     return done
 
 
+def stars_word(n: int) -> str:
+    """'50 зірок', '2 зірки', '1 зірка': the amount is said in words, the icon is the premium slot."""
+    if n % 10 == 1 and n % 100 != 11:
+        return "зірка"
+    if n % 10 in (2, 3, 4) and n % 100 not in (12, 13, 14):
+        return "зірки"
+    return "зірок"
+
+
 def _date(ts: int) -> str:
     return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%d.%m.%Y")
 
@@ -198,24 +208,23 @@ def screen(db, user_id: int, link: str | None) -> tuple[str, InlineKeyboardMarku
     stars = st["price"]
     features = "\n".join(f"• {escape(f)}" for f in FEATURES)
     if st["active"] and st["renews"]:
-        return (f"⭐ <b>Преміум активний</b>\n\nНаступне продовження — {_date(st['expires_at'])}, "
-                f"{stars} ⭐.\n\n{features}",
+        return (f"{icons.tg('premium')} <b>Преміум активний</b>\n\nНаступне продовження — {_date(st['expires_at'])}, "
+                f"{stars} {stars_word(stars)}.\n\n{features}",
                 InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(
                     text="Скасувати продовження", callback_data="premium_cancel")]]))
     if st["active"]:
-        return (f"⭐ <b>Преміум до {_date(st['expires_at'])}</b>\n\n"
+        return (f"{icons.tg('premium')} <b>Преміум до {_date(st['expires_at'])}</b>\n\n"
                 "Продовження вимкнено: доступ залишиться до кінця оплаченого місяця.",
                 InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(
                     text="Відновити продовження", callback_data="premium_resume", style="primary")]]))
-    text = (f"⭐ <b>Преміум</b>\n\n{features}\n\n"
-            f"<b>{stars} ⭐ на місяць.</b> Скасувати можна будь-коли, доступ залишиться до кінця місяця.")
+    text = (f"{icons.tg('premium')} <b>Преміум</b>\n\n{features}\n\n"
+            f"<b>{stars} {stars_word(stars)} на місяць.</b> Скасувати можна будь-коли, доступ залишиться до кінця місяця.")
     if not st["paywall"]:
         text += "\n\nЗараз усе доступно безкоштовно."
         return text, None
     if not link:
         return text + "\n\nНе вдалося створити рахунок. Спробуйте ще раз за хвилину.", None
-    return text, InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(
-        text=f"Оформити · {stars} ⭐ на місяць", url=link, style="primary")]])
+    return text, InlineKeyboardMarkup(inline_keyboard=[[kbd.button("premium", f"Оформити · {stars} {stars_word(stars)} на місяць", url=link, style="primary")]])
 
 
 async def show(message: Message, db, user_id: int, bot: Bot, *, edit: bool = False):
@@ -292,10 +301,10 @@ def setup(db):
         if expires is None:
             return
         if pay.is_recurring and not pay.is_first_recurring:
-            await message.answer(f"⭐ Преміум продовжено до {_date(expires)}.")
+            await message.answer(f"{icons.tg('premium')} Преміум продовжено до {_date(expires)}.", parse_mode=ParseMode.HTML)
         else:
             await message.answer(
-                f"⭐ <b>Дякуємо! Преміум активний до {_date(expires)}.</b>\n\n"
+                f"{icons.tg('premium')} <b>Дякуємо! Преміум активний до {_date(expires)}.</b>\n\n"
                 "Навчання і тести — у кнопці «Знаки» внизу чату.",
                 parse_mode=ParseMode.HTML,
             )
