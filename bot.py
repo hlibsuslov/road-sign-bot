@@ -80,8 +80,13 @@ bot = Bot(token=BOT_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 db = Database(db_path=os.getenv("DB_PATH", "road_signs_bot.db"))
+# Бот працює лише в особистих чатах: профіль, налаштування й прогрес — персональні.
+dp.message.filter(F.chat.type == "private")
+dp.callback_query.filter(F.message.chat.type == "private")
 # Обробники «все інше» йдуть останніми, після оплати (successful_payment — теж повідомлення).
 fallback_router = Router(name="fallback")
+fallback_router.message.filter(F.chat.type == "private")
+fallback_router.callback_query.filter(F.message.chat.type == "private")
 
 # Завантаження даних
 signs_main = load_signs_main()
@@ -1351,6 +1356,8 @@ async def main():
     global VALID_SIGNS
     logger.info("Бот запускається...")
     db.init_db()
+    premium.replay_unapplied(db)
+    db.purge_old_exams(int(time.time()) - 90 * 86400)
 
     # Перевірка картинок при старті
     VALID_SIGNS = validate_signs_integrity(signs_list)

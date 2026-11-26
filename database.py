@@ -190,6 +190,11 @@ class Database:
             )
         """)
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_exams_user ON exams (user_id, created_at)")
+        sub_cols = {r["name"] for r in cursor.execute("PRAGMA table_info(subscriptions)")}
+        if "first_charge_id" not in sub_cols:
+            # the charge that started the subscription: editUserStarSubscription needs it,
+            # while charge_id follows the current (renewed) period
+            cursor.execute("ALTER TABLE subscriptions ADD COLUMN first_charge_id TEXT")
 
         # v4: профіль і теорія
         cols = {r["name"] for r in cursor.execute("PRAGMA table_info(users)")}
@@ -405,14 +410,16 @@ class Database:
             if cur.rowcount != 1:
                 return False
             conn.execute("""
-                INSERT INTO subscriptions (user_id, charge_id, expires_at, is_canceled, updated_at)
-                VALUES (?, ?, ?, 0, ?)
+                INSERT INTO subscriptions (user_id, charge_id, first_charge_id, expires_at, is_canceled, updated_at)
+                VALUES (?, ?, ?, ?, 0, ?)
                 ON CONFLICT (user_id) DO UPDATE SET
                     charge_id = excluded.charge_id,
+                    first_charge_id = CASE WHEN ? THEN excluded.first_charge_id
+                                           ELSE COALESCE(subscriptions.first_charge_id, excluded.first_charge_id) END,
                     expires_at = MAX(subscriptions.expires_at, excluded.expires_at),
                     is_canceled = 0,
                     updated_at = excluded.updated_at
-            """, (user_id, charge_id, expires_at, now))
+            """, (user_id, charge_id, charge_id, expires_at, now, int(is_first_recurring or not is_recurring)))
             conn.commit()
             return True
 
@@ -440,6 +447,20 @@ class Database:
                 "SELECT COUNT(*) FROM exams WHERE user_id = ? AND finished_at IS NULL AND created_at > ?",
                 (user_id, since),
             ).fetchone()[0]
+
+    def exam_starts_since(self, user_id: int, since: int) -> int:
+        """All test attempts (finished or not) since `since` — the daily budget."""
+        with self.get_connection() as conn:
+            return conn.execute(
+                "SELECT COUNT(*) FROM exams WHERE user_id = ? AND created_at > ?", (user_id, since),
+            ).fetchone()[0]
+
+    def purge_old_exams(self, older_than: int) -> int:
+        """Retention: tests older than the cutoff are deleted (results live in the chat message)."""
+        with self.get_connection() as conn:
+            cur = conn.execute("DELETE FROM exams WHERE created_at < ?", (older_than,))
+            conn.commit()
+            return cur.rowcount
 
     def upsert_subscription(self, user_id: int, charge_id: str, expires_at: int):
         """Новий або продовжений період. Термін береться з successful_payment, не рахується."""

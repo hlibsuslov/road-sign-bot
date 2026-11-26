@@ -33,6 +33,7 @@ import random
 import re
 import secrets
 import time
+from datetime import date
 from pathlib import Path
 
 from aiohttp import web
@@ -57,7 +58,21 @@ EXAM_SIZES = (10, 20, 45)       # 45 = the real teoriprøven length
 EXAM_SECONDS_PER_QUESTION = 60
 EXAM_PASS_RATIO = 38 / 45       # teoriprøven klasse B: at most 7 mistakes out of 45
 EXAM_MAX_OPEN, EXAM_OPEN_WINDOW = 3, 3 * 3600   # unfinished tests per user in the window
+EXAM_DAILY_BUDGET = 30                          # all attempts per user per 24 h
 INVOICE_INTERVAL = 30           # seconds between invoice links per user (Telegram flood limits)
+
+
+def exam_passed(correct: int, total: int, took: int) -> bool:
+    """One grading rule for the result screen and the history: pass mark and time limit."""
+    return correct >= total * EXAM_PASS_RATIO and took <= total * EXAM_SECONDS_PER_QUESTION + 30
+
+
+def valid_date(value: str) -> bool:
+    try:
+        date.fromisoformat(value)
+        return True
+    except ValueError:
+        return False
 
 
 def build_catalog(signs_main: dict, signs_extra: dict, valid: list[str]) -> dict:
@@ -208,7 +223,7 @@ def create_app(*, db, bot_token: str, get_catalog, signs_main: dict, get_valid,
             "today": db.get_day_stats(user_id, time.strftime("%Y-%m-%d"))[0],
             "premium": premium.status(db, user_id),
             "exams": [{"correct": r["correct"], "total": r["total"], "finished_at": r["finished_at"],
-                       "passed": r["correct"] >= r["total"] * EXAM_PASS_RATIO}
+                       "passed": exam_passed(r["correct"], r["total"], r["finished_at"] - r["created_at"])}
                       for r in db.recent_exams(user_id)],
         }, headers={"Cache-Control": "no-store"})
 
@@ -283,8 +298,10 @@ def create_app(*, db, bot_token: str, get_catalog, signs_main: dict, get_valid,
         size = (await body(request)).get("size")
         if type(size) is not int or size not in EXAM_SIZES:
             raise web.HTTPBadRequest(text=f"size must be one of {EXAM_SIZES}")
-        if db.open_exam_count(user_id, int(time.time()) - EXAM_OPEN_WINDOW) >= EXAM_MAX_OPEN:
-            raise json_error(web.HTTPTooManyRequests, "too_many_open_tests")
+        now = int(time.time())
+        if (db.open_exam_count(user_id, now - EXAM_OPEN_WINDOW) >= EXAM_MAX_OPEN
+                or db.exam_starts_since(user_id, now - 86400) >= EXAM_DAILY_BUDGET):
+            raise json_error(web.HTTPTooManyRequests, "too_many_tests")
         valid = get_valid()
         lang = user["study_language"]
         picked = random.sample(valid, min(size, len(valid)))
@@ -345,7 +362,7 @@ def create_app(*, db, bot_token: str, get_catalog, signs_main: dict, get_valid,
         total = len(questions)
         took = int(time.time()) - exam["created_at"]
         timed_out = took > total * EXAM_SECONDS_PER_QUESTION + 30
-        passed = correct >= total * EXAM_PASS_RATIO and not timed_out
+        passed = exam_passed(correct, total, took)
         result = {"correct": correct, "total": total, "passed": passed,
                   "timed_out": timed_out, "items": items}
         if bot is not None:
@@ -418,12 +435,12 @@ def create_app(*, db, bot_token: str, get_catalog, signs_main: dict, get_valid,
         data = await body(request)
         fields = {}
         if "licence_class" in data:
-            if data["licence_class"] not in licence_classes:
+            if not isinstance(data["licence_class"], str) or data["licence_class"] not in licence_classes:
                 raise web.HTTPBadRequest(text="unknown licence class")
             fields["licence_class"] = data["licence_class"]
         if "exam_date" in data:
             value = data["exam_date"]
-            if value is not None and not (isinstance(value, str) and DATE.fullmatch(value)):
+            if value is not None and not (isinstance(value, str) and DATE.fullmatch(value) and valid_date(value)):
                 raise web.HTTPBadRequest(text="exam_date: YYYY-MM-DD or null")
             fields["exam_date"] = value
         if "daily_goal" in data:

@@ -209,7 +209,8 @@ class MiniAppServerTests(AioHTTPTestCase):
         self.assertEqual(me["profile"]["timezone"], "Europe/Oslo")
         topics = await (await self.client.get("/api/theory", headers=self.auth())).json()
         self.assertIn("tohjul", [t["id"] for t in topics["topics"]])
-        for bad in ({"licence_class": "Z"}, {"exam_date": "tomorrow"}, {"daily_goal": 1000},
+        for bad in ({"licence_class": "Z"}, {"licence_class": ["B"]}, {"exam_date": "tomorrow"},
+                    {"exam_date": "2027-02-30"}, {"daily_goal": 1000},
                     {"timezone": "../../etc"}, {"reminders": "yes"}):
             resp = await self.client.post("/api/profile", headers=self.auth(), json=bad)
             self.assertEqual(resp.status, 400, bad)
@@ -220,6 +221,9 @@ class MiniAppServerTests(AioHTTPTestCase):
             self.assertEqual(ok.status, 200)
         extra = await self.client.post("/api/exam/start", json={"size": 10}, headers=self.auth())
         self.assertEqual(extra.status, 429)
+        with patch.object(miniapp_server, "EXAM_MAX_OPEN", 100), patch.object(miniapp_server, "EXAM_DAILY_BUDGET", 3):
+            daily = await self.client.post("/api/exam/start", json={"size": 10}, headers=self.auth())
+            self.assertEqual(daily.status, 429)                # the daily budget counts every attempt
         self.assertEqual(extra.headers.get("X-Content-Type-Options"), "nosniff")
 
 
@@ -273,6 +277,34 @@ class PremiumTests(unittest.TestCase):
         self.assertFalse(premium.is_premium(self.db, 5))
         self.assertFalse(self.db.apply_refund(5, "c1"))
         self.assertFalse(self.db.apply_refund(6, "c1"))                 # not their charge
+
+    def test_checkout_refused_when_paywall_off_or_already_pending(self):
+        premium._pending_checkout.clear()
+        with patch.dict(os.environ, {"PAYWALL_ENABLED": "0"}):
+            self.assertIsNotNone(premium.check_pre_checkout(self.db, 5, "premium:5", "XTR", 50))
+        self.assertIsNone(premium.check_pre_checkout(self.db, 5, "premium:5", "XTR", 50))
+        self.assertIsNotNone(premium.check_pre_checkout(self.db, 5, "premium:5", "XTR", 50))   # second, overlapping
+        premium.apply_payment(self.db, 5, self.payment("c1", int(time.time()) + 3600))
+        self.assertNotIn(5, premium._pending_checkout)                                         # released
+
+    def test_cancel_uses_the_first_charge_after_renewals(self):
+        now = int(time.time())
+        premium.apply_payment(self.db, 5, self.payment("first", now + 30 * 86400))
+        premium.apply_payment(self.db, 5, self.payment("renew", now + 60 * 86400, first=False))
+        sub = self.db.get_subscription(5)
+        self.assertEqual(sub["first_charge_id"], "first")
+        self.assertEqual(sub["charge_id"], "renew")
+
+    def test_unapplied_payment_is_logged_and_replayed(self):
+        log = os.path.join(self.tmp.name, "unapplied.jsonl")
+        with patch.object(premium, "UNAPPLIED_LOG", log),                 patch.object(self.db, "apply_subscription_payment", side_effect=RuntimeError("disk full")):
+            with self.assertRaises(RuntimeError):
+                premium.apply_payment(self.db, 5, self.payment("lost", int(time.time()) + 3600))
+        self.assertFalse(premium.is_premium(self.db, 5))
+        with patch.object(premium, "UNAPPLIED_LOG", log):
+            self.assertEqual(premium.replay_unapplied(self.db), 1)
+            self.assertEqual(premium.replay_unapplied(self.db), 0)
+        self.assertTrue(premium.is_premium(self.db, 5))
 
     def test_access_ends_after_the_grace_window(self):
         now = int(time.time())

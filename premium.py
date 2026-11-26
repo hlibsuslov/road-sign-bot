@@ -16,6 +16,7 @@ for users until the owner switches it on (test bot first).
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import time
@@ -48,6 +49,13 @@ FEATURES = (
 )
 
 router = Router(name="premium")
+router.message.filter(F.chat.type == "private")
+router.callback_query.filter(F.message.chat.type == "private")
+
+CHECKOUT_HOLD = 15 * 60           # one approved checkout per user at a time
+_pending_checkout: dict[int, float] = {}
+UNAPPLIED_LOG = os.path.join(os.path.dirname(os.getenv("DB_PATH", "road_signs_bot.db")) or ".",
+                             "unapplied_payments.jsonl")
 
 
 def price_stars() -> int:
@@ -102,11 +110,17 @@ def check_pre_checkout(db, user_id: int, payload: str, currency: str, amount: in
     """None = accept; otherwise the reason shown to the user. Grants nothing."""
     if payload != payload_for(user_id):
         return "Цей рахунок створено для іншого акаунта."
+    if not paywall_enabled():
+        return "Зараз усе доступно безкоштовно — оплата не потрібна."
     if currency != "XTR" or amount != price_stars():
         return "Ціна змінилася. Відкрийте /premium і оформіть ще раз."
     st = status(db, user_id)
     if st["active"] and st["renews"]:
         return "Преміум уже активний — друга підписка не потрібна."
+    now = time.monotonic()
+    if now - _pending_checkout.get(user_id, -CHECKOUT_HOLD) < CHECKOUT_HOLD:
+        return "Оплата вже триває. Зачекайте кілька хвилин і перевірте /premium."
+    _pending_checkout[user_id] = now   # single process: the check and the hold are atomic
     return None
 
 
@@ -125,10 +139,48 @@ def apply_payment(db, user_id: int, pay) -> int | None:
             is_first_recurring=bool(pay.is_first_recurring),
         )
     except Exception:
-        # Polling won't redeliver this update: the charge id is what support needs to restore access.
+        # Polling won't redeliver this update: keep it on the volume and replay it at startup.
         logger.exception("PAYMENT NOT APPLIED: user %s charge %s", user_id, pay.telegram_payment_charge_id)
+        _log_unapplied(user_id, pay, expires)
         raise
+    finally:
+        _pending_checkout.pop(user_id, None)
     return expires if fresh else None
+
+
+def _log_unapplied(user_id: int, pay, expires: int) -> None:
+    record = {"user_id": user_id, "charge_id": pay.telegram_payment_charge_id, "amount": pay.total_amount,
+              "currency": pay.currency, "payload": pay.invoice_payload, "expires_at": expires,
+              "is_recurring": bool(pay.is_recurring), "is_first_recurring": bool(pay.is_first_recurring)}
+    try:
+        with open(UNAPPLIED_LOG, "a", encoding="utf-8") as f:
+            f.write(json.dumps(record) + "\n")
+    except OSError:
+        logger.exception("PAYMENT NOT LOGGED either: user %s charge %s", user_id, record["charge_id"])
+
+
+def replay_unapplied(db) -> int:
+    """At startup: apply payments that failed to save. Applied or duplicate lines are dropped."""
+    if not os.path.exists(UNAPPLIED_LOG):
+        return 0
+    with open(UNAPPLIED_LOG, encoding="utf-8") as f:
+        lines = [l for l in f if l.strip()]
+    left, done = [], 0
+    for line in lines:
+        rec = json.loads(line)
+        try:
+            db.apply_subscription_payment(
+                charge_id=rec["charge_id"], user_id=rec["user_id"], amount=rec["amount"],
+                currency=rec["currency"], payload=rec["payload"], expires_at=rec["expires_at"],
+                is_recurring=rec["is_recurring"], is_first_recurring=rec["is_first_recurring"])
+            done += 1
+        except Exception:
+            left.append(line)
+    with open(UNAPPLIED_LOG, "w", encoding="utf-8") as f:
+        f.writelines(left)
+    if done:
+        logger.warning("Replayed %s unapplied payment(s); %s still pending", done, len(left))
+    return done
 
 
 def _date(ts: int) -> str:
@@ -203,7 +255,7 @@ def setup(db):
         try:
             await bot.edit_user_star_subscription(
                 user_id=callback.from_user.id,
-                telegram_payment_charge_id=sub["charge_id"],
+                telegram_payment_charge_id=sub["first_charge_id"] or sub["charge_id"],
                 is_canceled=cancel,
             )
         except Exception as exc:
